@@ -5,6 +5,7 @@ from collections.abc import AsyncGenerator
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..application.use_cases.get_document_list import GetDocumentListUseCase
 from ..application.use_cases.upload_document import UploadDocumentUseCase
 from ..infrastructure.config.settings import get_settings
 from ..infrastructure.database.connection import async_session_factory
@@ -73,3 +74,17 @@ async def get_upload_document_use_case(
         document_repository=document_repository,
         file_storage_service=file_storage_service,
     )
+
+
+async def get_get_document_list_use_case(
+    document_repository: DocumentRepositoryImpl = Depends(get_document_repository),
+) -> GetDocumentListUseCase:
+    """文書一覧取得ユースケースを取得する。
+
+    Args:
+        document_repository: 文書リポジトリ
+
+    Returns:
+        GetDocumentListUseCase: 文書一覧取得ユースケース
+    """
+    return GetDocumentListUseCase(document_repository=document_repository)
