@@ -15,16 +15,38 @@ from fastapi import (
 )
 from pydantic import BaseModel, Field
 
+from ....application.use_cases.delete_document import (
+    DeleteDocumentInput,
+    DeleteDocumentUseCase,
+)
+from ....application.use_cases.get_document import (
+    GetDocumentInput,
+    GetDocumentUseCase,
+)
 from ....application.use_cases.get_document_list import (
     GetDocumentListInput,
     GetDocumentListUseCase,
+)
+from ....application.use_cases.update_document import (
+    UpdateDocumentInput,
+    UpdateDocumentUseCase,
 )
 from ....application.use_cases.upload_document import (
     UploadDocumentInput,
     UploadDocumentUseCase,
 )
+from ....domain.exceptions.document_exceptions import (
+    DocumentNotFoundError,
+    DocumentValidationError,
+)
 from ....domain.value_objects import PageInfo
-from ...dependencies import get_get_document_list_use_case, get_upload_document_use_case
+from ...dependencies import (
+    get_delete_document_use_case,
+    get_get_document_list_use_case,
+    get_get_document_use_case,
+    get_update_document_use_case,
+    get_upload_document_use_case,
+)
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -118,6 +140,97 @@ class DocumentListResponse(BaseModel):
                     "total_count": 1,
                     "total_pages": 1,
                 },
+            }
+        }
+
+
+class DocumentDetailResponse(BaseModel):
+    """文書詳細のレスポンス。"""
+
+    document_id: str = Field(..., description="文書ID")
+    title: str = Field(..., description="文書タイトル")
+    file_name: str = Field(..., description="ファイル名")
+    file_size: int = Field(..., description="ファイルサイズ（バイト）")
+    content_type: str = Field(..., description="コンテンツタイプ")
+    category: str | None = Field(None, description="カテゴリ")
+    tags: list[str] = Field(default_factory=list, description="タグリスト")
+    author: str | None = Field(None, description="作成者")
+    description: str | None = Field(None, description="文書の説明")
+    created_at: str = Field(..., description="作成日時（ISO形式）")
+    updated_at: str = Field(..., description="更新日時（ISO形式）")
+    version: int = Field(..., description="バージョン番号")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "document_id": "550e8400-e29b-41d4-a716-446655440000",
+                "title": "技術仕様書.pdf",
+                "file_name": "技術仕様書.pdf",
+                "file_size": 1048576,
+                "content_type": "application/pdf",
+                "category": "技術文書",
+                "tags": ["仕様書", "設計"],
+                "author": "山田太郎",
+                "description": "システムの技術仕様をまとめた文書です。",
+                "created_at": "2024-01-01T00:00:00",
+                "updated_at": "2024-01-01T00:00:00",
+                "version": 1,
+            }
+        }
+
+
+class DocumentUpdateRequest(BaseModel):
+    """文書更新のリクエスト。"""
+
+    title: str | None = Field(None, description="文書タイトル")
+    category: str | None = Field(None, description="カテゴリ")
+    tags: list[str] | None = Field(None, description="タグリスト")
+    author: str | None = Field(None, description="作成者")
+    description: str | None = Field(None, description="文書の説明")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "title": "技術仕様書 v2.0",
+                "category": "技術文書",
+                "tags": ["仕様書", "設計", "v2.0"],
+                "author": "山田太郎",
+                "description": "システムの技術仕様をまとめた文書（更新版）です。",
+            }
+        }
+
+
+class DocumentUpdateResponse(BaseModel):
+    """文書更新のレスポンス。"""
+
+    document_id: str = Field(..., description="文書ID")
+    title: str = Field(..., description="文書タイトル")
+    file_name: str = Field(..., description="ファイル名")
+    file_size: int = Field(..., description="ファイルサイズ（バイト）")
+    content_type: str = Field(..., description="コンテンツタイプ")
+    category: str | None = Field(None, description="カテゴリ")
+    tags: list[str] = Field(default_factory=list, description="タグリスト")
+    author: str | None = Field(None, description="作成者")
+    description: str | None = Field(None, description="文書の説明")
+    created_at: str = Field(..., description="作成日時（ISO形式）")
+    updated_at: str = Field(..., description="更新日時（ISO形式）")
+    version: int = Field(..., description="バージョン番号")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "document_id": "550e8400-e29b-41d4-a716-446655440000",
+                "title": "技術仕様書 v2.0",
+                "file_name": "技術仕様書.pdf",
+                "file_size": 1048576,
+                "content_type": "application/pdf",
+                "category": "技術文書",
+                "tags": ["仕様書", "設計", "v2.0"],
+                "author": "山田太郎",
+                "description": "システムの技術仕様をまとめた文書（更新版）です。",
+                "created_at": "2024-01-01T00:00:00",
+                "updated_at": "2024-01-02T00:00:00",
+                "version": 2,
             }
         }
 
@@ -314,4 +427,190 @@ async def get_document_list(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get document list: {str(e)}",
+        ) from e
+
+
+@router.get(
+    "/{document_id}",
+    response_model=DocumentDetailResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        404: {"model": ErrorResponse, "description": "Not Found"},
+        500: {"model": ErrorResponse, "description": "Internal Server Error"},
+    },
+    summary="文書詳細を取得",
+    description="指定されたIDの文書の詳細情報を取得します。",
+)
+async def get_document(
+    document_id: str,
+    use_case: GetDocumentUseCase = Depends(get_get_document_use_case),
+) -> DocumentDetailResponse:
+    """文書詳細を取得する。
+
+    Args:
+        document_id: 文書ID
+        use_case: 文書詳細取得ユースケース
+
+    Returns:
+        文書詳細レスポンス
+
+    Raises:
+        HTTPException: エラーが発生した場合
+    """
+    try:
+        # 入力DTOを作成
+        input_dto = GetDocumentInput(document_id=document_id)
+
+        # ユースケースを実行
+        output_dto = await use_case.execute(input_dto)
+
+        # レスポンスを作成
+        return DocumentDetailResponse(
+            document_id=output_dto.document_id,
+            title=output_dto.title,
+            file_name=output_dto.file_name,
+            file_size=output_dto.file_size,
+            content_type=output_dto.content_type,
+            category=output_dto.category,
+            tags=output_dto.tags,
+            author=output_dto.author,
+            description=output_dto.description,
+            created_at=output_dto.created_at,
+            updated_at=output_dto.updated_at,
+            version=output_dto.version,
+        )
+
+    except DocumentNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with id '{document_id}' not found",
+        ) from None
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get document: {str(e)}",
+        ) from e
+
+
+@router.put(
+    "/{document_id}",
+    response_model=DocumentUpdateResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        400: {"model": ErrorResponse, "description": "Bad Request"},
+        404: {"model": ErrorResponse, "description": "Not Found"},
+        500: {"model": ErrorResponse, "description": "Internal Server Error"},
+    },
+    summary="文書を更新",
+    description="指定されたIDの文書のメタデータを更新します。",
+)
+async def update_document(
+    document_id: str,
+    request: DocumentUpdateRequest,
+    use_case: UpdateDocumentUseCase = Depends(get_update_document_use_case),
+) -> DocumentUpdateResponse:
+    """文書を更新する。
+
+    Args:
+        document_id: 文書ID
+        request: 更新リクエスト
+        use_case: 文書更新ユースケース
+
+    Returns:
+        文書更新レスポンス
+
+    Raises:
+        HTTPException: エラーが発生した場合
+    """
+    try:
+        # 入力DTOを作成
+        input_dto = UpdateDocumentInput(
+            document_id=document_id,
+            title=request.title,
+            category=request.category,
+            tags=request.tags,
+            author=request.author,
+            description=request.description,
+        )
+
+        # ユースケースを実行
+        output_dto = await use_case.execute(input_dto)
+
+        # レスポンスを作成
+        return DocumentUpdateResponse(
+            document_id=output_dto.document_id,
+            title=output_dto.title,
+            file_name=output_dto.file_name,
+            file_size=output_dto.file_size,
+            content_type=output_dto.content_type,
+            category=output_dto.category,
+            tags=output_dto.tags,
+            author=output_dto.author,
+            description=output_dto.description,
+            created_at=output_dto.created_at,
+            updated_at=output_dto.updated_at,
+            version=output_dto.version,
+        )
+
+    except DocumentNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with id '{document_id}' not found",
+        ) from None
+    except DocumentValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update document: {str(e)}",
+        ) from e
+
+
+@router.delete(
+    "/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        404: {"model": ErrorResponse, "description": "Not Found"},
+        500: {"model": ErrorResponse, "description": "Internal Server Error"},
+    },
+    summary="文書を削除",
+    description="指定されたIDの文書を削除します。",
+)
+async def delete_document(
+    document_id: str,
+    use_case: DeleteDocumentUseCase = Depends(get_delete_document_use_case),
+) -> None:
+    """文書を削除する。
+
+    Args:
+        document_id: 文書ID
+        use_case: 文書削除ユースケース
+
+    Raises:
+        HTTPException: エラーが発生した場合
+    """
+    try:
+        # 入力DTOを作成
+        input_dto = DeleteDocumentInput(document_id=document_id)
+
+        # ユースケースを実行
+        await use_case.execute(input_dto)
+
+    except DocumentNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with id '{document_id}' not found",
+        ) from None
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete document: {str(e)}",
         ) from e
