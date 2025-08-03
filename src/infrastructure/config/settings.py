@@ -1,0 +1,87 @@
+"""アプリケーション設定管理。"""
+
+from functools import lru_cache
+from pathlib import Path
+
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """アプリケーション設定。
+
+    環境変数から設定を読み込み、バリデーションを行う。
+    """
+
+    # Database Configuration
+    database_url: str = Field(
+        default="postgresql+asyncpg://user:password@localhost:5432/ragdb",
+        description="PostgreSQL接続URL（非同期版）",
+    )
+
+    # File Storage Configuration
+    file_storage_path: Path = Field(
+        default=Path("./uploads"),
+        description="ファイルストレージのベースパス",
+    )
+
+    # Application Configuration
+    debug: bool = Field(default=False, description="デバッグモード")
+    log_level: str = Field(default="INFO", description="ログレベル")
+
+    # Azure Configuration (optional for now)
+    azure_storage_connection_string: str | None = Field(
+        default=None,
+        description="Azure Blob Storage接続文字列",
+    )
+    azure_storage_container_name: str | None = Field(
+        default=None,
+        description="Azure Blob Storageコンテナ名",
+    )
+
+    # Database Pool Configuration
+    database_pool_size: int = Field(
+        default=10, description="データベース接続プールサイズ"
+    )
+    database_max_overflow: int = Field(
+        default=20, description="最大オーバーフロー接続数"
+    )
+    database_pool_timeout: int = Field(default=30, description="接続タイムアウト（秒）")
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    @field_validator("file_storage_path", mode="before")
+    @classmethod
+    def validate_file_storage_path(cls, v: str | Path) -> Path:
+        """ファイルストレージパスのバリデーション。"""
+        path = Path(v) if isinstance(v, str) else v
+        return path.absolute()
+
+    @field_validator("log_level")
+    @classmethod
+    def validate_log_level(cls, v: str) -> str:
+        """ログレベルのバリデーション。"""
+        valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        v_upper = v.upper()
+        if v_upper not in valid_levels:
+            raise ValueError(f"Invalid log level: {v}. Must be one of {valid_levels}")
+        return v_upper
+
+    def ensure_file_storage_path(self) -> None:
+        """ファイルストレージディレクトリを作成する。"""
+        self.file_storage_path.mkdir(parents=True, exist_ok=True)
+
+
+@lru_cache
+def get_settings() -> Settings:
+    """設定のシングルトンインスタンスを取得する。
+
+    Returns:
+        Settings: アプリケーション設定
+    """
+    return Settings()
