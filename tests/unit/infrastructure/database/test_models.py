@@ -164,7 +164,10 @@ class TestDocumentChunkModel:
             model.chunk_metadata["overlap_with_previous"]
             == chunk_metadata.overlap_with_previous
         )
-        assert model.chunk_metadata["overlap_with_next"] == chunk_metadata.overlap_with_next
+        assert (
+            model.chunk_metadata["overlap_with_next"]
+            == chunk_metadata.overlap_with_next
+        )
 
     def test_to_domain(self) -> None:
         """モデルからドメイン値オブジェクトへの変換をテストする。"""
