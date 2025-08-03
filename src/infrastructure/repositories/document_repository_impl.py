@@ -73,12 +73,12 @@ class DocumentRepositoryImpl(DocumentRepository):
                     existing.file_path = file_path  # type: ignore[assignment]
 
                 # 既存のチャンクを削除
-                await self.session.execute(
-                    select(DocumentChunkModel).where(
-                        DocumentChunkModel.document_id == existing.id
-                    )
+                stmt = select(DocumentChunkModel).where(
+                    DocumentChunkModel.document_id == existing.id
                 )
-                for chunk in existing.chunks:
+                result = await self.session.execute(stmt)
+                chunks = result.scalars().all()
+                for chunk in chunks:
                     await self.session.delete(chunk)
 
                 # 新しいチャンクを追加

@@ -1427,6 +1427,7 @@ dev = [
 [package.dev-dependencies]
 dev = [
     { name = "aiosqlite" },
+    { name = "greenlet" },
 ]
 
 [package.metadata]
@@ -1467,7 +1468,10 @@ requires-dist = [
 provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "aiosqlite", specifier = ">=0.21.0" }]
+dev = [
+    { name = "aiosqlite", specifier = ">=0.21.0" },
+    { name = "greenlet", specifier = ">=3.2.3" },
+]
 
 [[package]]
 name = "redis"

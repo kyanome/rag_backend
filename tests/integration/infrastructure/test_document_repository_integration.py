@@ -249,16 +249,19 @@ class TestDocumentRepositoryIntegration:
             )
         ]
 
-        original_add_chunk = sample_document.add_chunk
-
-        def failing_add_chunk(chunk):
-            original_add_chunk(chunk)
+        # ファイルストレージの保存メソッドをモックしてエラーを発生させる
+        original_save = repository.file_storage.save
+        
+        async def failing_save(*args, **kwargs):
             raise Exception("Simulated error")
-
-        sample_document.add_chunk = failing_add_chunk
+        
+        repository.file_storage.save = failing_save
 
         with pytest.raises(Exception, match="Failed to save document"):
             await repository.save(sample_document)
+        
+        # 元に戻す
+        repository.file_storage.save = original_save
 
         found = await repository.find_by_id(sample_document.id)
         assert found is None
