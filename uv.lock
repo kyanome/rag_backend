@@ -1386,6 +1386,7 @@ name = "rag-backend"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "aiosqlite" },
     { name = "alembic" },
     { name = "asyncpg" },
     { name = "azure-identity" },
@@ -1432,6 +1433,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiosqlite", specifier = ">=0.21.0" },
     { name = "alembic", specifier = ">=1.13.0" },
     { name = "anyio", marker = "extra == 'dev'", specifier = ">=4.2.0" },
     { name = "asyncpg", specifier = ">=0.29.0" },
