@@ -9,15 +9,18 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
 from ..config.settings import get_settings
 
-# SQLAlchemyのベースクラス
-Base = declarative_base()
 
-# 設定の取得
-settings = get_settings()
+class Base(DeclarativeBase):
+    """SQLAlchemyのベースクラス。"""
+
+    pass
+
+
+# 設定の取得は遅延評価にする
 
 
 class DatabaseManager:
@@ -27,6 +30,7 @@ class DatabaseManager:
         """データベースマネージャーを初期化する。"""
         self._engine: AsyncEngine | None = None
         self._sessionmaker: async_sessionmaker[AsyncSession] | None = None
+        self._settings = None
 
     @property
     def engine(self) -> AsyncEngine:
@@ -36,14 +40,24 @@ class DatabaseManager:
             AsyncEngine: SQLAlchemy非同期エンジン
         """
         if self._engine is None:
-            self._engine = create_async_engine(
-                settings.database_url,
-                echo=settings.debug,
-                pool_size=settings.database_pool_size,
-                max_overflow=settings.database_max_overflow,
-                pool_timeout=settings.database_pool_timeout,
-                pool_pre_ping=True,  # 接続の健全性チェック
-            )
+            settings = get_settings()
+
+            # SQLiteの場合は特殊な設定を使用
+            if settings.database_url.startswith("sqlite"):
+                self._engine = create_async_engine(
+                    settings.database_url,
+                    echo=settings.debug,
+                    connect_args={"check_same_thread": False},
+                )
+            else:
+                self._engine = create_async_engine(
+                    settings.database_url,
+                    echo=settings.debug,
+                    pool_size=settings.database_pool_size,
+                    max_overflow=settings.database_max_overflow,
+                    pool_timeout=settings.database_pool_timeout,
+                    pool_pre_ping=True,  # 接続の健全性チェック
+                )
         return self._engine
 
     @property
@@ -105,3 +119,29 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     async with db_manager.get_session() as session:
         yield session
+
+
+def async_session_factory() -> async_sessionmaker[AsyncSession]:
+    """非同期セッションファクトリーを取得する。
+
+    Returns:
+        async_sessionmaker: セッションファクトリー
+    """
+    return db_manager.sessionmaker
+
+
+async def init_database() -> None:
+    """データベースを初期化する。"""
+    # エンジンを取得（接続を確立）
+    _ = db_manager.engine
+
+
+async def create_all_tables() -> None:
+    """すべてのテーブルを作成する。
+
+    テスト用の関数。
+    """
+    from .models import Base as ModelBase
+
+    async with db_manager.engine.begin() as conn:
+        await conn.run_sync(ModelBase.metadata.create_all)
