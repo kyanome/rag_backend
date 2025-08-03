@@ -1,5 +1,6 @@
 """SQLAlchemyモデルのテスト。"""
 
+import base64
 import uuid
 from datetime import datetime
 
@@ -41,7 +42,7 @@ class TestDocumentModel:
         # 検証
         assert str(model.id) == document.id.value
         assert model.title == document.title
-        assert model.content == document.content.decode("utf-8")
+        assert model.content == base64.b64encode(document.content).decode("ascii")
         assert model.version == document.version
         assert model.document_metadata["file_name"] == metadata.file_name
         assert model.document_metadata["file_size"] == metadata.file_size
@@ -63,7 +64,7 @@ class TestDocumentModel:
         model = DocumentModel(
             id=model_id,
             title="テスト文書",
-            content="Test content",
+            content=base64.b64encode(b"Test content").decode("ascii"),
             file_path="test/path/test.pdf",
             document_metadata={
                 "file_name": "test.pdf",
@@ -85,7 +86,7 @@ class TestDocumentModel:
         # 検証
         assert document.id.value == str(model_id)
         assert document.title == model.title
-        assert document.content == model.content.encode("utf-8")
+        assert document.content == b"Test content"
         assert document.version == model.version
         assert document.metadata.file_name == "test.pdf"
         assert document.metadata.file_size == 1024

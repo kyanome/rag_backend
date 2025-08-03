@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 
 from ..entities import Document
-from ..value_objects import DocumentId
+from ..value_objects import DocumentFilter, DocumentId, DocumentListItem
 
 
 class DocumentRepository(ABC):
@@ -39,16 +39,17 @@ class DocumentRepository(ABC):
 
     @abstractmethod
     async def find_all(
-        self, skip: int = 0, limit: int = 100
-    ) -> tuple[list[Document], int]:
-        """すべての文書を取得する。
+        self, skip: int = 0, limit: int = 100, filter_: DocumentFilter | None = None
+    ) -> tuple[list[DocumentListItem], int]:
+        """文書一覧を取得する。
 
         Args:
             skip: スキップする件数
             limit: 取得する最大件数
+            filter_: フィルター条件
 
         Returns:
-            文書のリストと総件数のタプル
+            文書リストアイテムのリストと総件数のタプル
         """
         pass
 

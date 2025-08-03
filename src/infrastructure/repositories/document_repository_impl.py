@@ -2,15 +2,16 @@
 
 import base64
 import uuid
+from typing import Any, cast
 
-from sqlalchemy import func, select
+from sqlalchemy import BinaryExpression, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.domain.entities import Document
 from src.domain.exceptions import DocumentNotFoundError
 from src.domain.repositories import DocumentRepository
-from src.domain.value_objects import DocumentId
+from src.domain.value_objects import DocumentFilter, DocumentId, DocumentListItem
 
 from ..database.models import DocumentChunkModel, DocumentModel
 from ..externals.file_storage import FileStorageService
@@ -131,27 +132,83 @@ class DocumentRepositoryImpl(DocumentRepository):
         return model.to_domain()
 
     async def find_all(
-        self, skip: int = 0, limit: int = 100
-    ) -> tuple[list[Document], int]:
-        """すべての文書を取得する。
+        self, skip: int = 0, limit: int = 100, filter_: DocumentFilter | None = None
+    ) -> tuple[list[DocumentListItem], int]:
+        """文書一覧を取得する。
 
         Args:
             skip: スキップする件数
             limit: 取得する最大件数
+            filter_: フィルター条件
 
         Returns:
-            文書のリストと総件数のタプル
+            文書リストアイテムのリストと総件数のタプル
         """
+        # ベースクエリ
+        base_query = select(DocumentModel)
+
+        # フィルター条件の適用
+        if filter_:
+            conditions: list[BinaryExpression[bool]] = []
+
+            # タイトルフィルター（部分一致、大文字小文字無視）
+            if filter_.title:
+                conditions.append(DocumentModel.title.ilike(f"%{filter_.title}%"))
+
+            # 日付フィルター
+            if filter_.created_from:
+                conditions.append(
+                    cast(
+                        BinaryExpression[bool],
+                        DocumentModel.created_at >= filter_.created_from,
+                    )
+                )
+            if filter_.created_to:
+                conditions.append(
+                    cast(
+                        BinaryExpression[bool],
+                        DocumentModel.created_at <= filter_.created_to,
+                    )
+                )
+
+            # カテゴリフィルター
+            if filter_.category:
+                # JSONフィールド内のcategoryを検索
+                conditions.append(
+                    cast(
+                        BinaryExpression[bool],
+                        func.json_extract(DocumentModel.document_metadata, "$.category")
+                        == filter_.category,
+                    )
+                )
+
+            # タグフィルター（いずれかに一致）
+            if filter_.tags:
+                tag_conditions = []
+                for tag in filter_.tags:
+                    # JSONフィールド内のtagsを検索（SQLiteの場合）
+                    tag_conditions.append(
+                        func.json_extract(
+                            DocumentModel.document_metadata, "$.tags"
+                        ).like(f'%"{tag}"%')
+                    )
+                if tag_conditions:
+                    conditions.append(
+                        cast(BinaryExpression[bool], or_(*tag_conditions))
+                    )
+
+            # すべての条件を適用
+            if conditions:
+                base_query = base_query.where(and_(*conditions))
+
         # 総件数の取得
-        count_stmt = select(func.count()).select_from(DocumentModel)
+        count_stmt = select(func.count()).select_from(base_query.subquery())
         total_result = await self.session.execute(count_stmt)
         total = total_result.scalar() or 0
 
         # 文書の取得
         stmt = (
-            select(DocumentModel)
-            .options(selectinload(DocumentModel.chunks))
-            .offset(skip)
+            base_query.offset(skip)
             .limit(limit)
             .order_by(DocumentModel.created_at.desc())
         )
@@ -159,8 +216,25 @@ class DocumentRepositoryImpl(DocumentRepository):
         result = await self.session.execute(stmt)
         models = result.scalars().all()
 
-        documents = [model.to_domain() for model in models]
-        return documents, total
+        # DocumentListItemに変換
+        items = []
+        for model in models:
+            metadata_dict: dict[str, Any] = model.document_metadata or {}  # type: ignore[assignment]
+            item = DocumentListItem(
+                id=DocumentId(value=str(model.id)),
+                title=model.title,  # type: ignore[arg-type]
+                file_name=metadata_dict.get("file_name", ""),
+                file_size=metadata_dict.get("file_size", 0),
+                content_type=metadata_dict.get("content_type", ""),
+                category=metadata_dict.get("category"),
+                tags=metadata_dict.get("tags", []),
+                author=metadata_dict.get("author"),
+                created_at=model.created_at,  # type: ignore[arg-type]
+                updated_at=model.updated_at,  # type: ignore[arg-type]
+            )
+            items.append(item)
+
+        return items, total
 
     async def update(self, document: Document) -> None:
         """文書を更新する。

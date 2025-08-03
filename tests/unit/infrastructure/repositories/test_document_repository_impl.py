@@ -157,8 +157,20 @@ class TestDocumentRepositoryImpl:
         sample_document: Document,
     ) -> None:
         """全文書の取得をテストする。"""
+        # モックモデルの準備
         mock_model = MagicMock(spec=DocumentModel)
-        mock_model.to_domain.return_value = sample_document
+        mock_model.id = uuid.UUID(sample_document.id.value)
+        mock_model.title = sample_document.title
+        mock_model.document_metadata = {
+            "file_name": sample_document.metadata.file_name,
+            "file_size": sample_document.metadata.file_size,
+            "content_type": sample_document.metadata.content_type,
+            "category": sample_document.metadata.category,
+            "tags": sample_document.metadata.tags,
+            "author": sample_document.metadata.author,
+        }
+        mock_model.created_at = sample_document.metadata.created_at
+        mock_model.updated_at = sample_document.metadata.updated_at
 
         mock_count_result = MagicMock()
         mock_count_result.scalar.return_value = 1
@@ -168,11 +180,13 @@ class TestDocumentRepositoryImpl:
 
         mock_session.execute.side_effect = [mock_count_result, mock_docs_result]
 
-        documents, total = await repository.find_all(skip=0, limit=10)
+        items, total = await repository.find_all(skip=0, limit=10)
 
-        assert len(documents) == 1
+        assert len(items) == 1
         assert total == 1
-        assert documents[0] == sample_document
+        # DocumentListItemなので属性を確認
+        assert items[0].id.value == sample_document.id.value
+        assert items[0].title == sample_document.title
 
     async def test_update(
         self,
