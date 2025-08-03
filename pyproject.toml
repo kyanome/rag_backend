@@ -152,3 +152,8 @@ skip_covered = false
 
 [tool.coverage.html]
 directory = "htmlcov"
+
+[dependency-groups]
+dev = [
+    "aiosqlite>=0.21.0",
+]
