@@ -1,4 +1,4 @@
-.PHONY: help setup install check test format lint type-check clean run dev
+.PHONY: help setup install check test format lint type-check clean run dev init-db
 
 # Default target
 help:
@@ -13,6 +13,7 @@ help:
 	@echo "  make clean       - Clean temporary files"
 	@echo "  make run         - Run the application"
 	@echo "  make dev         - Run in development mode with auto-reload"
+	@echo "  make init-db     - Initialize database tables"
 
 # Set up development environment
 setup:
@@ -67,3 +68,7 @@ run:
 # Run in development mode
 dev:
 	uv run uvicorn src.presentation.main:app --reload --host 0.0.0.0 --port 8000
+
+# Initialize database tables
+init-db:
+	uv run python scripts/init_db.py
