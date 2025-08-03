@@ -1,5 +1,7 @@
 """DocumentRepositoryの実装。"""
 
+import uuid
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -50,7 +52,7 @@ class DocumentRepositoryImpl(DocumentRepository):
                 file_path = None
 
             # 既存のレコードを確認
-            existing = await self.session.get(DocumentModel, document.id.value)
+            existing = await self.session.get(DocumentModel, uuid.UUID(document.id.value))
 
             if existing:
                 # 更新の場合
@@ -112,7 +114,7 @@ class DocumentRepositoryImpl(DocumentRepository):
         """
         stmt = (
             select(DocumentModel)
-            .where(DocumentModel.id == document_id.value)
+            .where(DocumentModel.id == uuid.UUID(document_id.value))
             .options(selectinload(DocumentModel.chunks))
         )
 
@@ -185,7 +187,7 @@ class DocumentRepositoryImpl(DocumentRepository):
             Exception: 削除に失敗した場合
         """
         try:
-            model = await self.session.get(DocumentModel, document_id.value)
+            model = await self.session.get(DocumentModel, uuid.UUID(document_id.value))
             if model is None:
                 raise DocumentNotFoundError(document_id.value)
 
@@ -215,7 +217,7 @@ class DocumentRepositoryImpl(DocumentRepository):
         Returns:
             存在する場合はTrue、存在しない場合はFalse
         """
-        stmt = select(DocumentModel.id).where(DocumentModel.id == document_id.value)
+        stmt = select(DocumentModel.id).where(DocumentModel.id == uuid.UUID(document_id.value))
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
