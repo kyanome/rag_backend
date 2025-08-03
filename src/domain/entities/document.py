@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, Field, field_validator
 
-from ..exceptions import DocumentValidationError
+from ..exceptions.document_exceptions import DocumentValidationError
 from ..value_objects import DocumentChunk, DocumentId, DocumentMetadata
 
 

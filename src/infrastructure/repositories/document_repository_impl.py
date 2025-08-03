@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.domain.entities import Document
-from src.domain.exceptions import DocumentNotFoundError
+from src.domain.exceptions.document_exceptions import DocumentNotFoundError
 from src.domain.repositories import DocumentRepository
 from src.domain.value_objects import DocumentFilter, DocumentId, DocumentListItem
 
