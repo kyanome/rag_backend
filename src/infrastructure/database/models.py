@@ -5,8 +5,9 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlalchemy.orm import relationship
+from sqlalchemy.types import CHAR, TypeDecorator
 
 from src.domain.entities import Document as DomainDocument
 from src.domain.value_objects import (
@@ -21,20 +22,56 @@ from src.domain.value_objects import (
 from .connection import Base
 
 
+class UUID(TypeDecorator):
+    """プラットフォーム非依存のUUID型。
+
+    PostgreSQLではUUID型を使用し、その他のDBでは
+    CHAR(36)にUUID文字列を格納する。
+    """
+
+    impl = CHAR
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect: Any) -> Any:
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(PostgresUUID(as_uuid=True))
+        else:
+            return dialect.type_descriptor(CHAR(36))
+
+    def process_bind_param(self, value: Any, dialect: Any) -> Any:
+        if value is None:
+            return value
+        elif dialect.name == "postgresql":
+            return value
+        else:
+            return str(value)
+
+    def process_result_value(self, value: Any, dialect: Any) -> Any:
+        if value is None:
+            return value
+        elif dialect.name == "postgresql":
+            return value
+        else:
+            return uuid.UUID(value)
+
+
 class DocumentModel(Base):
     """文書テーブルのSQLAlchemyモデル。"""
 
     __tablename__ = "documents"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Column[uuid.UUID] = Column(UUID(), primary_key=True, default=uuid.uuid4)
     title = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=True)
     content = Column(Text, nullable=False)  # バイナリデータはBase64エンコードして保存
     document_metadata = Column(JSON, nullable=False)
     version = Column(Integer, default=1, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(), nullable=False)
     updated_at = Column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        DateTime,
+        default=lambda: datetime.now(),
+        onupdate=lambda: datetime.now(),
+        nullable=False,
     )
 
     # リレーション
@@ -122,11 +159,13 @@ class DocumentChunkModel(Base):
     __tablename__ = "document_chunks"
 
     id = Column(String(36), primary_key=True)
-    document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False)
+    document_id: Column[uuid.UUID] = Column(
+        UUID(), ForeignKey("documents.id"), nullable=False
+    )
     content = Column(Text, nullable=False)
     embedding = Column(JSON, nullable=True)  # ベクトルはJSONとして保存
     chunk_metadata = Column(JSON, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(), nullable=False)
 
     # リレーション
     document = relationship("DocumentModel", back_populates="chunks")
