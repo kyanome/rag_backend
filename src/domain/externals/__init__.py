@@ -1,0 +1,1 @@
+"""Domain external service interfaces."""
