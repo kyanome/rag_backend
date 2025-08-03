@@ -251,15 +251,15 @@ class TestDocumentRepositoryIntegration:
 
         # ファイルストレージの保存メソッドをモックしてエラーを発生させる
         original_save = repository.file_storage.save
-        
+
         async def failing_save(*args, **kwargs):
             raise Exception("Simulated error")
-        
+
         repository.file_storage.save = failing_save
 
         with pytest.raises(Exception, match="Failed to save document"):
             await repository.save(sample_document)
-        
+
         # 元に戻す
         repository.file_storage.save = original_save
 

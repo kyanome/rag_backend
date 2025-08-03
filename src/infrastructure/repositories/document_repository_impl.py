@@ -52,7 +52,9 @@ class DocumentRepositoryImpl(DocumentRepository):
                 file_path = None
 
             # 既存のレコードを確認
-            existing = await self.session.get(DocumentModel, uuid.UUID(document.id.value))
+            existing = await self.session.get(
+                DocumentModel, uuid.UUID(document.id.value)
+            )
 
             if existing:
                 # 更新の場合
@@ -217,7 +219,9 @@ class DocumentRepositoryImpl(DocumentRepository):
         Returns:
             存在する場合はTrue、存在しない場合はFalse
         """
-        stmt = select(DocumentModel.id).where(DocumentModel.id == uuid.UUID(document_id.value))
+        stmt = select(DocumentModel.id).where(
+            DocumentModel.id == uuid.UUID(document_id.value)
+        )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none() is not None
 

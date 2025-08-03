@@ -44,7 +44,7 @@ class DocumentChunk(BaseModel):
             埋め込みベクトルが設定されたDocumentChunkインスタンス
         """
         return self.model_copy(update={"embedding": embedding})
-    
+
     @classmethod
     def create(
         cls,
