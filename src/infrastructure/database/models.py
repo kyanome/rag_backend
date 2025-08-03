@@ -1,5 +1,6 @@
 """SQLAlchemyモデル定義。"""
 
+import base64
 import uuid
 from datetime import datetime
 from typing import Any
@@ -103,7 +104,7 @@ class DocumentModel(Base):
         domain_document = DomainDocument(
             id=DocumentId(value=str(self.id)),
             title=self.title,  # type: ignore[arg-type]
-            content=self.content.encode("utf-8") if self.content else b"",
+            content=base64.b64decode(self.content) if self.content else b"",
             metadata=document_metadata,
             chunks=[],
             version=self.version,  # type: ignore[arg-type]
@@ -139,7 +140,11 @@ class DocumentModel(Base):
         model = cls(
             id=uuid.UUID(document.id.value),
             title=document.title,
-            content=document.content.decode("utf-8") if document.content else "",
+            content=(
+                base64.b64encode(document.content).decode("ascii")
+                if document.content
+                else ""
+            ),
             document_metadata=metadata_dict,
             version=document.version,
             created_at=document.metadata.created_at,

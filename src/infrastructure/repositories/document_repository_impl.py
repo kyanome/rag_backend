@@ -1,5 +1,6 @@
 """DocumentRepositoryの実装。"""
 
+import base64
 import uuid
 
 from sqlalchemy import func, select
@@ -59,7 +60,8 @@ class DocumentRepositoryImpl(DocumentRepository):
             if existing:
                 # 更新の場合
                 existing.title = document.title  # type: ignore[assignment]
-                existing.content = document.content.decode("utf-8") if document.content else ""  # type: ignore[assignment]
+                # バイナリコンテンツはBase64エンコードして保存
+                existing.content = base64.b64encode(document.content).decode("ascii") if document.content else ""  # type: ignore[assignment]
                 existing.document_metadata = {  # type: ignore[assignment]
                     "file_name": document.metadata.file_name,
                     "file_size": document.metadata.file_size,
