@@ -1,5 +1,6 @@
 """User entity implementation."""
 
+import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
@@ -13,6 +14,7 @@ class User:
     id: UserId
     email: Email
     hashed_password: HashedPassword
+    name: str
     role: UserRole
     is_active: bool = True
     is_email_verified: bool = False
@@ -30,6 +32,25 @@ class User:
             raise TypeError("hashed_password must be a HashedPassword instance")
         if not isinstance(self.role, UserRole):
             raise TypeError("role must be a UserRole instance")
+
+    @classmethod
+    def create(
+        cls,
+        email: Email,
+        hashed_password: HashedPassword,
+        name: str,
+        role: UserRole,
+    ) -> "User":
+        """Create a new user with generated ID."""
+        return cls(
+            id=UserId(str(uuid.uuid4())),
+            email=email,
+            hashed_password=hashed_password,
+            name=name,
+            role=role,
+            is_active=True,
+            is_email_verified=False,
+        )
 
     def verify_password(self, plain_password: str) -> bool:
         """Verify a plain password against the user's hashed password."""
@@ -77,6 +98,10 @@ class User:
 
     def record_login(self) -> None:
         """Record the user's login timestamp."""
+        self.last_login_at = datetime.now(UTC)
+
+    def update_last_login(self) -> None:
+        """Update the user's last login timestamp."""
         self.last_login_at = datetime.now(UTC)
 
     def can_login(self) -> bool:

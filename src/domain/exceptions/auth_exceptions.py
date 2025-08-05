@@ -57,6 +57,18 @@ class InvalidTokenException(AuthenticationException):
         super().__init__(message)
 
 
+class SessionNotFoundException(AuthenticationException):
+    """Exception raised when a session is not found."""
+
+    def __init__(self, message: str = "Session not found") -> None:
+        """Initialize the exception.
+
+        Args:
+            message: The error message
+        """
+        super().__init__(message)
+
+
 class UserAlreadyExistsException(DomainException):
     """Exception raised when attempting to create a user that already exists."""
 
