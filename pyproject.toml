@@ -157,6 +157,7 @@ directory = "htmlcov"
 [dependency-groups]
 dev = [
     "aiosqlite>=0.21.0",
+    "alembic>=1.16.4",
     "black>=25.1.0",
     "greenlet>=3.2.3",
     "mypy>=1.17.1",
@@ -164,4 +165,5 @@ dev = [
     "pytest-asyncio>=1.1.0",
     "pytest-cov>=6.2.1",
     "ruff>=0.12.7",
+    "types-passlib>=1.7.7.20250602",
 ]

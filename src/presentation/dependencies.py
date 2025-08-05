@@ -13,7 +13,11 @@ from ..application.use_cases.upload_document import UploadDocumentUseCase
 from ..infrastructure.config.settings import get_settings
 from ..infrastructure.database.connection import async_session_factory
 from ..infrastructure.externals import FileStorageService
-from ..infrastructure.repositories import DocumentRepositoryImpl
+from ..infrastructure.repositories import (
+    DocumentRepositoryImpl,
+    SessionRepositoryImpl,
+    UserRepositoryImpl,
+)
 
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
@@ -133,3 +137,31 @@ async def get_delete_document_use_case(
         DeleteDocumentUseCase: 文書削除ユースケース
     """
     return DeleteDocumentUseCase(document_repository=document_repository)
+
+
+async def get_user_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> UserRepositoryImpl:
+    """ユーザーリポジトリを取得する。
+
+    Args:
+        session: データベースセッション
+
+    Returns:
+        UserRepositoryImpl: ユーザーリポジトリ
+    """
+    return UserRepositoryImpl(session=session)
+
+
+async def get_session_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> SessionRepositoryImpl:
+    """セッションリポジトリを取得する。
+
+    Args:
+        session: データベースセッション
+
+    Returns:
+        SessionRepositoryImpl: セッションリポジトリ
+    """
+    return SessionRepositoryImpl(session=session)

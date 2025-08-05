@@ -2,7 +2,7 @@
 
 import base64
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from src.domain.entities import Document
 from src.domain.value_objects import (
@@ -58,8 +58,8 @@ class TestDocumentModel:
         """モデルからドメインエンティティへの変換をテストする。"""
         # モデルの作成
         model_id = uuid.uuid4()
-        created_at = datetime.utcnow()
-        updated_at = datetime.utcnow()
+        created_at = datetime.now(UTC)
+        updated_at = datetime.now(UTC)
 
         model = DocumentModel(
             id=model_id,
