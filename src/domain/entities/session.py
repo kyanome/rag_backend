@@ -35,11 +35,21 @@ class Session:
 
         # Ensure expiration times are in the future
         now = datetime.now(UTC)
-        if self.access_token_expires_at <= now:
+        # Ensure both datetime objects are timezone-aware for comparison
+        access_expires = self.access_token_expires_at
+        refresh_expires = self.refresh_token_expires_at
+        
+        # Make timezone-aware if needed
+        if access_expires.tzinfo is None:
+            access_expires = access_expires.replace(tzinfo=UTC)
+        if refresh_expires.tzinfo is None:
+            refresh_expires = refresh_expires.replace(tzinfo=UTC)
+            
+        if access_expires <= now:
             raise ValueError("Access token expiration must be in the future")
-        if self.refresh_token_expires_at <= now:
+        if refresh_expires <= now:
             raise ValueError("Refresh token expiration must be in the future")
-        if self.refresh_token_expires_at <= self.access_token_expires_at:
+        if refresh_expires <= access_expires:
             raise ValueError("Refresh token must expire after access token")
 
     @classmethod
@@ -70,11 +80,17 @@ class Session:
 
     def is_access_token_expired(self) -> bool:
         """Check if the access token has expired."""
-        return datetime.now(UTC) >= self.access_token_expires_at
+        expires = self.access_token_expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=UTC)
+        return datetime.now(UTC) >= expires
 
     def is_refresh_token_expired(self) -> bool:
         """Check if the refresh token has expired."""
-        return datetime.now(UTC) >= self.refresh_token_expires_at
+        expires = self.refresh_token_expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=UTC)
+        return datetime.now(UTC) >= expires
 
     def is_expired(self) -> bool:
         """Check if the entire session has expired."""
