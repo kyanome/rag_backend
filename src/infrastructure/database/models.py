@@ -2,7 +2,7 @@
 
 import base64
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import (
@@ -82,11 +82,11 @@ class DocumentModel(Base):
     content = Column(Text, nullable=False)  # バイナリデータはBase64エンコードして保存
     document_metadata = Column(JSON, nullable=False)
     version = Column(Integer, default=1, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     updated_at = Column(
         DateTime,
-        default=lambda: datetime.now(),
-        onupdate=lambda: datetime.now(),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )
 
@@ -185,7 +185,7 @@ class DocumentChunkModel(Base):
     content = Column(Text, nullable=False)
     embedding = Column(JSON, nullable=True)  # ベクトルはJSONとして保存
     chunk_metadata = Column(JSON, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
     # リレーション
     document = relationship("DocumentModel", back_populates="chunks")
@@ -255,11 +255,11 @@ class UserModel(Base):
     role = Column(String(50), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     is_email_verified = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     updated_at = Column(
         DateTime,
-        default=lambda: datetime.now(),
-        onupdate=lambda: datetime.now(),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )
     last_login_at = Column(DateTime, nullable=True)
@@ -323,8 +323,8 @@ class SessionModel(Base):
     refresh_token = Column(String(500), unique=True, nullable=False, index=True)
     access_token_expires_at = Column(DateTime, nullable=False)
     refresh_token_expires_at = Column(DateTime, nullable=False, index=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(), nullable=False)
-    last_accessed_at = Column(DateTime, default=lambda: datetime.now(), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    last_accessed_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     ip_address = Column(String(45), nullable=True)  # IPv6対応のため45文字
     user_agent = Column(String(500), nullable=True)
 
