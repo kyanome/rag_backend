@@ -48,6 +48,19 @@ class Settings(BaseSettings):
     )
     database_pool_timeout: int = Field(default=30, description="接続タイムアウト（秒）")
 
+    # JWT Configuration
+    jwt_secret_key: str = Field(
+        default="your-secret-key-here-change-in-production",
+        description="JWT署名用の秘密鍵",
+    )
+    jwt_algorithm: str = Field(default="HS256", description="JWT署名アルゴリズム")
+    access_token_expire_minutes: int = Field(
+        default=15, description="アクセストークン有効期限（分）"
+    )
+    refresh_token_expire_days: int = Field(
+        default=30, description="リフレッシュトークン有効期限（日）"
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -71,6 +84,22 @@ class Settings(BaseSettings):
         if v_upper not in valid_levels:
             raise ValueError(f"Invalid log level: {v}. Must be one of {valid_levels}")
         return v_upper
+
+    @field_validator("jwt_secret_key")
+    @classmethod
+    def validate_jwt_secret_key(cls, v: str) -> str:
+        """JWT秘密鍵のバリデーション。"""
+        if v == "your-secret-key-here-change-in-production":
+            import warnings
+
+            warnings.warn(
+                "Using default JWT secret key. Please set JWT_SECRET_KEY in production!",
+                UserWarning,
+                stacklevel=2,
+            )
+        elif len(v) < 32:
+            raise ValueError("JWT secret key must be at least 32 characters long")
+        return v
 
     def ensure_file_storage_path(self) -> None:
         """ファイルストレージディレクトリを作成する。"""
