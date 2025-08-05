@@ -157,6 +157,7 @@ directory = "htmlcov"
 [dependency-groups]
 dev = [
     "aiosqlite>=0.21.0",
+    "alembic>=1.16.4",
     "black>=25.1.0",
     "greenlet>=3.2.3",
     "mypy>=1.17.1",
