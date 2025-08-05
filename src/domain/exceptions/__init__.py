@@ -11,7 +11,7 @@ from .auth_exceptions import (
     UserAlreadyExistsException,
     UserNotFoundException,
 )
-from .base import DomainException
+from .base import DomainException, RepositoryError
 from .document_exceptions import (
     DocumentError,
     DocumentNotFoundError,
@@ -22,6 +22,7 @@ from .document_exceptions import (
 __all__ = [
     # Base
     "DomainException",
+    "RepositoryError",
     # Document
     "DocumentError",
     "DocumentNotFoundError",
