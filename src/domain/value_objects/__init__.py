@@ -6,7 +6,11 @@ from .document_filter import DocumentFilter
 from .document_id import DocumentId
 from .document_list_item import DocumentListItem
 from .document_metadata import DocumentMetadata
+from .email import Email
+from .hashed_password import HashedPassword
 from .page_info import PageInfo
+from .user_id import UserId
+from .user_role import Permission, RoleName, UserRole
 
 __all__ = [
     "DocumentId",
@@ -16,4 +20,10 @@ __all__ = [
     "PageInfo",
     "DocumentFilter",
     "DocumentListItem",
+    "Email",
+    "HashedPassword",
+    "Permission",
+    "RoleName",
+    "UserId",
+    "UserRole",
 ]
