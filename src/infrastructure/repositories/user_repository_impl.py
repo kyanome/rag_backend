@@ -53,7 +53,9 @@ class UserRepositoryImpl(UserRepository):
             await self.session.flush()
         except IntegrityError as e:
             if "email" in str(e.orig):
-                raise RepositoryError(f"User with email {user.email.value} already exists") from e
+                raise RepositoryError(
+                    f"User with email {user.email.value} already exists"
+                ) from e
             raise RepositoryError(f"Failed to save user: {str(e)}") from e
         except Exception as e:
             raise RepositoryError(f"Failed to save user: {str(e)}") from e
@@ -174,7 +176,9 @@ class UserRepositoryImpl(UserRepository):
             raise
         except IntegrityError as e:
             if "email" in str(e.orig):
-                raise RepositoryError(f"User with email {user.email.value} already exists") from e
+                raise RepositoryError(
+                    f"User with email {user.email.value} already exists"
+                ) from e
             raise RepositoryError(f"Failed to update user: {str(e)}") from e
         except Exception as e:
             raise RepositoryError(f"Failed to update user: {str(e)}") from e
@@ -213,7 +217,11 @@ class UserRepositoryImpl(UserRepository):
             RepositoryError: If the check operation fails
         """
         try:
-            stmt = select(func.count()).select_from(UserModel).where(UserModel.email == email.value)
+            stmt = (
+                select(func.count())
+                .select_from(UserModel)
+                .where(UserModel.email == email.value)
+            )
             result = await self.session.execute(stmt)
             count = cast(int, result.scalar())
             return count > 0

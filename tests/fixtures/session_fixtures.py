@@ -12,15 +12,16 @@ def create_expired_session(
     session_suffix: str = "",
 ) -> DomainSession:
     """Create an expired session for testing.
-    
+
     This bypasses the validation in __post_init__ by creating the session
     in a controlled way.
     """
     import uuid
+
     session_id = f"expired_{uuid.uuid4()}{session_suffix}"
     now = datetime.now(UTC)
     expired_time = now - timedelta(hours=hours_ago)
-    
+
     # Create session dict without triggering validation
     session_data = {
         "id": session_id,
@@ -34,10 +35,10 @@ def create_expired_session(
         "ip_address": "192.168.1.1",
         "user_agent": "Test Agent",
     }
-    
+
     # Create the session object directly
     session = DomainSession.__new__(DomainSession)
     for key, value in session_data.items():
         setattr(session, key, value)
-    
+
     return session

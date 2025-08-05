@@ -1,13 +1,12 @@
 """Integration tests for SessionRepository implementation."""
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.entities import Session, User
-from src.domain.exceptions import RepositoryError
 from src.domain.exceptions.auth_exceptions import SessionExpiredException
 from src.domain.services import PasswordHasher
 from src.domain.value_objects import Email, UserId, UserRole
@@ -22,9 +21,7 @@ def password_hasher() -> PasswordHasher:
 
 
 @pytest.fixture
-async def test_user(
-    db_session: AsyncSession, password_hasher: PasswordHasher
-) -> User:
+async def test_user(db_session: AsyncSession, password_hasher: PasswordHasher) -> User:
     """Create and save a test user."""
     user = User(
         id=UserId(value=str(uuid.uuid4())),

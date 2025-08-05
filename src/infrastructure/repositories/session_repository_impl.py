@@ -90,7 +90,9 @@ class SessionRepositoryImpl(SessionRepository):
             session_model = result.scalar_one_or_none()
             return session_model.to_domain() if session_model else None
         except Exception as e:
-            raise RepositoryError(f"Failed to find session by access token: {str(e)}") from e
+            raise RepositoryError(
+                f"Failed to find session by access token: {str(e)}"
+            ) from e
 
     async def find_by_refresh_token(self, refresh_token: str) -> Session | None:
         """Find a session by refresh token.
@@ -105,12 +107,16 @@ class SessionRepositoryImpl(SessionRepository):
             RepositoryError: If the find operation fails
         """
         try:
-            stmt = select(SessionModel).where(SessionModel.refresh_token == refresh_token)
+            stmt = select(SessionModel).where(
+                SessionModel.refresh_token == refresh_token
+            )
             result = await self.session.execute(stmt)
             session_model = result.scalar_one_or_none()
             return session_model.to_domain() if session_model else None
         except Exception as e:
-            raise RepositoryError(f"Failed to find session by refresh token: {str(e)}") from e
+            raise RepositoryError(
+                f"Failed to find session by refresh token: {str(e)}"
+            ) from e
 
     async def find_by_user_id(self, user_id: UserId) -> list[Session]:
         """Find all sessions for a user.
@@ -134,7 +140,9 @@ class SessionRepositoryImpl(SessionRepository):
             session_models = result.scalars().all()
             return [session_model.to_domain() for session_model in session_models]
         except Exception as e:
-            raise RepositoryError(f"Failed to find sessions by user ID: {str(e)}") from e
+            raise RepositoryError(
+                f"Failed to find sessions by user ID: {str(e)}"
+            ) from e
 
     async def update(self, session_entity: Session) -> None:
         """Update a session entity.
@@ -152,7 +160,9 @@ class SessionRepositoryImpl(SessionRepository):
 
             # Check if session is expired
             if session_entity.is_expired():
-                raise SessionExpiredException(f"Cannot update expired session {session_entity.id}")
+                raise SessionExpiredException(
+                    f"Cannot update expired session {session_entity.id}"
+                )
 
             # Update the model
             session_model = SessionModel.from_domain(session_entity)
@@ -200,7 +210,9 @@ class SessionRepositoryImpl(SessionRepository):
             await self.session.execute(stmt)
             await self.session.flush()
         except Exception as e:
-            raise RepositoryError(f"Failed to delete sessions for user: {str(e)}") from e
+            raise RepositoryError(
+                f"Failed to delete sessions for user: {str(e)}"
+            ) from e
 
     async def delete_expired(self) -> int:
         """Delete all expired sessions.
@@ -213,7 +225,9 @@ class SessionRepositoryImpl(SessionRepository):
         """
         try:
             now = datetime.now(UTC)
-            stmt = delete(SessionModel).where(SessionModel.refresh_token_expires_at < now)
+            stmt = delete(SessionModel).where(
+                SessionModel.refresh_token_expires_at < now
+            )
             result = await self.session.execute(stmt)
             await self.session.flush()
             return result.rowcount or 0

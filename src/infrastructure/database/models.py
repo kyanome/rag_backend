@@ -324,7 +324,9 @@ class SessionModel(Base):
     access_token_expires_at = Column(DateTime, nullable=False)
     refresh_token_expires_at = Column(DateTime, nullable=False, index=True)
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
-    last_accessed_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    last_accessed_at = Column(
+        DateTime, default=lambda: datetime.now(UTC), nullable=False
+    )
     ip_address = Column(String(45), nullable=True)  # IPv6対応のため45文字
     user_agent = Column(String(500), nullable=True)
 

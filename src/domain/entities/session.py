@@ -38,13 +38,13 @@ class Session:
         # Ensure both datetime objects are timezone-aware for comparison
         access_expires = self.access_token_expires_at
         refresh_expires = self.refresh_token_expires_at
-        
+
         # Make timezone-aware if needed
         if access_expires.tzinfo is None:
             access_expires = access_expires.replace(tzinfo=UTC)
         if refresh_expires.tzinfo is None:
             refresh_expires = refresh_expires.replace(tzinfo=UTC)
-            
+
         if access_expires <= now:
             raise ValueError("Access token expiration must be in the future")
         if refresh_expires <= now:
