@@ -5,16 +5,31 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import CHAR, TypeDecorator
 
 from src.domain.entities import Document as DomainDocument
+from src.domain.entities import Session as DomainSession
+from src.domain.entities import User as DomainUser
 from src.domain.value_objects import (
     ChunkMetadata,
     DocumentId,
     DocumentMetadata,
+    Email,
+    HashedPassword,
+    UserId,
+    UserRole,
 )
 from src.domain.value_objects import (
     DocumentChunk as DomainDocumentChunk,
@@ -226,4 +241,134 @@ class DocumentChunkModel(Base):
             content=chunk.content,
             embedding=chunk.embedding,
             chunk_metadata=metadata_dict,
+        )
+
+
+class UserModel(Base):
+    """ユーザーテーブルのSQLAlchemyモデル。"""
+
+    __tablename__ = "users"
+
+    id: Column[uuid.UUID] = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    hashed_password = Column(String(255), nullable=False)
+    role = Column(String(50), nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    is_email_verified = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(), nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(),
+        onupdate=lambda: datetime.now(),
+        nullable=False,
+    )
+    last_login_at = Column(DateTime, nullable=True)
+
+    # リレーション
+    sessions = relationship(
+        "SessionModel", back_populates="user", cascade="all, delete-orphan"
+    )
+
+    def to_domain(self) -> DomainUser:
+        """ドメインエンティティに変換する。
+
+        Returns:
+            DomainUser: ドメインのユーザーエンティティ
+        """
+        return DomainUser(
+            id=UserId(value=str(self.id)),
+            email=Email(value=self.email),  # type: ignore[arg-type]
+            hashed_password=HashedPassword(value=self.hashed_password),  # type: ignore[arg-type]
+            role=UserRole.from_name(self.role),  # type: ignore[arg-type]
+            is_active=self.is_active,  # type: ignore[arg-type]
+            is_email_verified=self.is_email_verified,  # type: ignore[arg-type]
+            created_at=self.created_at,  # type: ignore[arg-type]
+            updated_at=self.updated_at,  # type: ignore[arg-type]
+            last_login_at=self.last_login_at,  # type: ignore[arg-type]
+        )
+
+    @classmethod
+    def from_domain(cls, user: DomainUser) -> "UserModel":
+        """ドメインエンティティからモデルを作成する。
+
+        Args:
+            user: ドメインのユーザーエンティティ
+
+        Returns:
+            UserModel: SQLAlchemyモデル
+        """
+        return cls(
+            id=uuid.UUID(user.id.value),
+            email=user.email.value,
+            hashed_password=user.hashed_password.value,
+            role=str(user.role),  # UserRole.__str__() returns the role name
+            is_active=user.is_active,
+            is_email_verified=user.is_email_verified,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+            last_login_at=user.last_login_at,
+        )
+
+
+class SessionModel(Base):
+    """セッションテーブルのSQLAlchemyモデル。"""
+
+    __tablename__ = "sessions"
+
+    id = Column(String(36), primary_key=True)
+    user_id: Column[uuid.UUID] = Column(
+        UUID(), ForeignKey("users.id"), nullable=False, index=True
+    )
+    access_token = Column(String(500), unique=True, nullable=False, index=True)
+    refresh_token = Column(String(500), unique=True, nullable=False, index=True)
+    access_token_expires_at = Column(DateTime, nullable=False)
+    refresh_token_expires_at = Column(DateTime, nullable=False, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(), nullable=False)
+    last_accessed_at = Column(DateTime, default=lambda: datetime.now(), nullable=False)
+    ip_address = Column(String(45), nullable=True)  # IPv6対応のため45文字
+    user_agent = Column(String(500), nullable=True)
+
+    # リレーション
+    user = relationship("UserModel", back_populates="sessions")
+
+    def to_domain(self) -> DomainSession:
+        """ドメインエンティティに変換する。
+
+        Returns:
+            DomainSession: ドメインのセッションエンティティ
+        """
+        return DomainSession(
+            id=self.id,  # type: ignore[arg-type]
+            user_id=UserId(value=str(self.user_id)),
+            access_token=self.access_token,  # type: ignore[arg-type]
+            refresh_token=self.refresh_token,  # type: ignore[arg-type]
+            access_token_expires_at=self.access_token_expires_at,  # type: ignore[arg-type]
+            refresh_token_expires_at=self.refresh_token_expires_at,  # type: ignore[arg-type]
+            created_at=self.created_at,  # type: ignore[arg-type]
+            last_accessed_at=self.last_accessed_at,  # type: ignore[arg-type]
+            ip_address=self.ip_address,  # type: ignore[arg-type]
+            user_agent=self.user_agent,  # type: ignore[arg-type]
+        )
+
+    @classmethod
+    def from_domain(cls, session: DomainSession) -> "SessionModel":
+        """ドメインエンティティからモデルを作成する。
+
+        Args:
+            session: ドメインのセッションエンティティ
+
+        Returns:
+            SessionModel: SQLAlchemyモデル
+        """
+        return cls(
+            id=session.id,
+            user_id=uuid.UUID(session.user_id.value),
+            access_token=session.access_token,
+            refresh_token=session.refresh_token,
+            access_token_expires_at=session.access_token_expires_at,
+            refresh_token_expires_at=session.refresh_token_expires_at,
+            created_at=session.created_at,
+            last_accessed_at=session.last_accessed_at,
+            ip_address=session.ip_address,
+            user_agent=session.user_agent,
         )
