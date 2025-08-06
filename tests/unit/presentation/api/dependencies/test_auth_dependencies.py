@@ -53,7 +53,9 @@ class TestAuthDependencies:
         )
 
     @pytest.fixture
-    def valid_credentials(self, jwt_service: JwtService, sample_user: User) -> HTTPAuthorizationCredentials:
+    def valid_credentials(
+        self, jwt_service: JwtService, sample_user: User
+    ) -> HTTPAuthorizationCredentials:
         """Create valid HTTP Bearer credentials."""
         access_token, _ = jwt_service.create_access_token(
             sample_user.id, sample_user.email.value, sample_user.role
@@ -105,9 +107,10 @@ class TestAuthDependencies:
     ) -> None:
         """Test extracting user ID when 'sub' is missing from token."""
         # Create a token without 'sub' field
-        from jose import jwt
         from datetime import UTC, datetime, timedelta
-        
+
+        from jose import jwt
+
         payload = {
             "email": "test@example.com",
             "role": "viewer",
@@ -115,7 +118,9 @@ class TestAuthDependencies:
             "exp": datetime.now(UTC) + timedelta(minutes=15),
             "iat": datetime.now(UTC),
         }
-        token = jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+        token = jwt.encode(
+            payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+        )
         credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
 
         # Act & Assert

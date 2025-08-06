@@ -1,7 +1,7 @@
 """Tests for refresh token use case."""
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 from unittest.mock import AsyncMock, Mock
 
 import pytest

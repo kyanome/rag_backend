@@ -114,4 +114,3 @@ class LoginUseCase:
             refresh_token=refresh_token,
             session_id=session.id,
         )
-

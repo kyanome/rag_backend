@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from jose import JWTError, jwt
+from jose import JWTError, jwt  # type: ignore[import-untyped]
 
 from ...domain.value_objects import UserId, UserRole
 from ...infrastructure.config.settings import Settings
@@ -87,7 +87,7 @@ class JwtService:
         """
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
-            return payload
+            return payload  # type: ignore[no-any-return]
         except JWTError as e:
             raise JWTError(f"Invalid token: {str(e)}") from e
 
@@ -170,5 +170,4 @@ class JwtService:
         if not session_id:
             raise JWTError("Session ID not found in refresh token")
 
-        return session_id
-
+        return session_id  # type: ignore[no-any-return]

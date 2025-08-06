@@ -143,7 +143,9 @@ async def login(
         ) from e
 
 
-@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED
+)
 async def register(
     request: RegisterRequest,
     user_repository: Annotated[UserRepository, Depends(get_user_repository)],
@@ -313,4 +315,3 @@ async def get_current_user_info(
             else None
         ),
     )
-

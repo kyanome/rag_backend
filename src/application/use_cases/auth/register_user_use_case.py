@@ -57,7 +57,9 @@ class RegisterUserUseCase:
         # Check if user already exists
         existing_user = await self.user_repository.find_by_email(email)
         if existing_user:
-            raise UserAlreadyExistsException(f"User with email {email.value} already exists")
+            raise UserAlreadyExistsException(
+                f"User with email {email.value} already exists"
+            )
 
         # Create new user
         user = User.create(
@@ -74,4 +76,3 @@ class RegisterUserUseCase:
             user=user,
             success=True,
         )
-

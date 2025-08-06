@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from jose import JWTError
+from jose import JWTError  # type: ignore[import-untyped]
 
 from ....domain.exceptions.auth_exceptions import (
     AuthenticationException,
@@ -123,4 +123,3 @@ class RefreshTokenUseCase:
             access_token=new_access_token,
             refresh_token=new_refresh_token,
         )
-

@@ -13,7 +13,6 @@ from src.domain.exceptions.auth_exceptions import AuthenticationException
 from src.domain.repositories import SessionRepository, UserRepository
 from src.domain.services import PasswordHasher
 from src.domain.value_objects import Email, UserId, UserRole
-from src.infrastructure.config.settings import Settings
 
 
 class TestLoginUseCase:
@@ -72,6 +71,7 @@ class TestLoginUseCase:
         login_use_case: LoginUseCase,
         mock_user_repository: Mock,
         mock_session_repository: Mock,
+        mock_jwt_service: Mock,
         sample_user: User,
     ) -> None:
         """Test successful login."""
@@ -85,15 +85,10 @@ class TestLoginUseCase:
 
         access_token = "test_access_token"
         refresh_token = "test_refresh_token"
-        session_id = str(uuid.uuid4())
 
         mock_user_repository.find_by_email = AsyncMock(return_value=sample_user)
-        mock_jwt_service.create_access_token = Mock(
-            return_value=(access_token, None)
-        )
-        mock_jwt_service.create_refresh_token = Mock(
-            return_value=(refresh_token, None)
-        )
+        mock_jwt_service.create_access_token = Mock(return_value=(access_token, None))
+        mock_jwt_service.create_refresh_token = Mock(return_value=(refresh_token, None))
         mock_session_repository.save = AsyncMock()
 
         # Act
@@ -199,6 +194,7 @@ class TestLoginUseCase:
         login_use_case: LoginUseCase,
         mock_user_repository: Mock,
         mock_session_repository: Mock,
+        mock_jwt_service: Mock,
         sample_user: User,
     ) -> None:
         """Test that login updates user's last login timestamp."""
@@ -229,6 +225,7 @@ class TestLoginUseCase:
         login_use_case: LoginUseCase,
         mock_user_repository: Mock,
         mock_session_repository: Mock,
+        mock_jwt_service: Mock,
         sample_user: User,
     ) -> None:
         """Test login with optional parameters (no IP/user agent)."""

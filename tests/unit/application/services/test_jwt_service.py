@@ -19,13 +19,15 @@ class TestJwtService:
     def settings(self) -> Settings:
         """Create test settings."""
         return Settings()
-    
+
     @pytest.fixture
     def jwt_service(self, settings: Settings) -> JwtService:
         """Create a JWT service instance."""
         return JwtService(settings=settings)
 
-    def test_create_access_token(self, jwt_service: JwtService, settings: Settings) -> None:
+    def test_create_access_token(
+        self, jwt_service: JwtService, settings: Settings
+    ) -> None:
         """Test creating an access token."""
         user_id = UserId(value=str(uuid.uuid4()))
         email = "test@example.com"
@@ -54,7 +56,9 @@ class TestJwtService:
         assert "exp" in decoded
         assert "iat" in decoded
 
-    def test_create_refresh_token(self, jwt_service: JwtService, settings: Settings) -> None:
+    def test_create_refresh_token(
+        self, jwt_service: JwtService, settings: Settings
+    ) -> None:
         """Test creating a refresh token."""
         user_id = UserId(value=str(uuid.uuid4()))
         session_id = str(uuid.uuid4())
@@ -213,13 +217,15 @@ class TestJwtService:
 
         assert extracted_session_id == session_id
 
-    def test_extract_session_id_from_access_token(self, jwt_service: JwtService) -> None:
+    def test_extract_session_id_from_access_token(
+        self, jwt_service: JwtService
+    ) -> None:
         """Test extracting session ID from access token (should fail)."""
         user_id = UserId(value=str(uuid.uuid4()))
         email = "test@example.com"
         role = UserRole.viewer()
 
         token, _ = jwt_service.create_access_token(user_id, email, role)
-        
+
         with pytest.raises(JWTError):
             jwt_service.extract_session_id(token)

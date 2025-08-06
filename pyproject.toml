@@ -27,6 +27,7 @@ dependencies = [
     "azure-identity>=1.15.0",
     "python-dotenv>=1.0.0",
     "aiosqlite>=0.21.0",
+    "email-validator>=2.2.0",
 ]
 
 [project.optional-dependencies]
@@ -159,6 +160,7 @@ dev = [
     "aiosqlite>=0.21.0",
     "alembic>=1.16.4",
     "black>=25.1.0",
+    "freezegun>=1.5.4",
     "greenlet>=3.2.3",
     "mypy>=1.17.1",
     "pytest>=8.4.1",

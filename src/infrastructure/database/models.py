@@ -252,6 +252,7 @@ class UserModel(Base):
     id: Column[uuid.UUID] = Column(UUID(), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
+    name = Column(String(255), nullable=False)
     role = Column(String(50), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     is_email_verified = Column(Boolean, default=False, nullable=False)
@@ -279,6 +280,7 @@ class UserModel(Base):
             id=UserId(value=str(self.id)),
             email=Email(value=self.email),  # type: ignore[arg-type]
             hashed_password=HashedPassword(value=self.hashed_password),  # type: ignore[arg-type]
+            name=self.name,  # type: ignore[arg-type]
             role=UserRole.from_name(self.role),  # type: ignore[arg-type]
             is_active=self.is_active,  # type: ignore[arg-type]
             is_email_verified=self.is_email_verified,  # type: ignore[arg-type]
@@ -301,7 +303,8 @@ class UserModel(Base):
             id=uuid.UUID(user.id.value),
             email=user.email.value,
             hashed_password=user.hashed_password.value,
-            role=str(user.role),  # UserRole.__str__() returns the role name
+            name=user.name,
+            role=user.role.name.value,  # Get the role name value
             is_active=user.is_active,
             is_email_verified=user.is_email_verified,
             created_at=user.created_at,

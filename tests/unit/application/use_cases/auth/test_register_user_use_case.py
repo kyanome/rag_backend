@@ -1,6 +1,5 @@
 """Tests for register user use case."""
 
-import uuid
 from unittest.mock import AsyncMock, Mock
 
 import pytest

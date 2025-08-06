@@ -1,7 +1,7 @@
 """Integration tests for authentication API endpoints."""
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,7 +11,6 @@ from src.application.services import JwtService
 from src.domain.entities import Session, User
 from src.domain.services import PasswordHasher
 from src.domain.value_objects import Email, UserId, UserRole
-from src.infrastructure.config import settings
 from src.infrastructure.repositories import SessionRepositoryImpl, UserRepositoryImpl
 from src.presentation.main import app
 
@@ -311,7 +310,10 @@ class TestAuthAPI:
 
     @pytest.mark.asyncio
     async def test_login_inactive_user(
-        self, client: TestClient, db_session: AsyncSession, password_hasher: PasswordHasher
+        self,
+        client: TestClient,
+        db_session: AsyncSession,
+        password_hasher: PasswordHasher,
     ) -> None:
         """Test login with inactive user."""
         # Arrange - Create inactive user
@@ -323,7 +325,7 @@ class TestAuthAPI:
             role=UserRole.viewer(),
             is_active=False,
         )
-        
+
         user_repo = UserRepositoryImpl(session=db_session)
         await user_repo.save(inactive_user)
         await db_session.commit()

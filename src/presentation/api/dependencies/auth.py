@@ -5,7 +5,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError
+from jose import JWTError  # type: ignore[import-untyped]
 
 from ....application.services import JwtService
 from ....domain.entities import User
@@ -170,4 +170,3 @@ def require_permission(permission: Permission | list[Permission]) -> Callable:
         return current_user
 
     return permission_checker
-

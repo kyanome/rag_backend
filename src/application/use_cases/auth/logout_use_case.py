@@ -48,11 +48,15 @@ class LogoutUseCase:
             # Logout specific session
             session = await self.session_repository.find_by_id(input_data.session_id)
             if not session:
-                raise SessionNotFoundException(f"Session {input_data.session_id} not found")
+                raise SessionNotFoundException(
+                    f"Session {input_data.session_id} not found"
+                )
 
             # Verify session belongs to user
             if session.user_id != input_data.user_id:
-                raise SessionNotFoundException(f"Session {input_data.session_id} not found")
+                raise SessionNotFoundException(
+                    f"Session {input_data.session_id} not found"
+                )
 
             # Delete session
             await self.session_repository.delete(input_data.session_id)
@@ -78,4 +82,3 @@ class LogoutUseCase:
             success=True,
             sessions_invalidated=sessions_invalidated,
         )
-
