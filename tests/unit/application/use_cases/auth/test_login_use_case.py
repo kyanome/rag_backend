@@ -215,7 +215,7 @@ class TestLoginUseCase:
         )
 
         mock_user_repository.find_by_email = AsyncMock(return_value=sample_user)
-        mock_user_repository.update = AsyncMock()
+        mock_user_repository.save = AsyncMock()
         access_expires = datetime.now(UTC) + timedelta(minutes=15)
         refresh_expires = datetime.now(UTC) + timedelta(days=30)
         mock_jwt_service.create_access_token = Mock(
@@ -230,7 +230,7 @@ class TestLoginUseCase:
         await login_use_case.execute(input_data)
 
         # Assert
-        mock_user_repository.update.assert_called_once_with(sample_user)
+        mock_user_repository.save.assert_called_once_with(sample_user)
         assert sample_user.last_login_at is not None
 
     @pytest.mark.asyncio

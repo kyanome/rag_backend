@@ -5,10 +5,14 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from src.application.use_cases.auth import RegisterUserUseCase
+from src.application.use_cases.auth.register_user_use_case import (
+    RegisterUserInput,
+    RegisterUserOutput,
+)
 from src.domain.entities import User
 from src.domain.exceptions.auth_exceptions import UserAlreadyExistsException
 from src.domain.repositories import UserRepository
-from src.domain.value_objects import Email, UserRole
+from src.domain.value_objects import Email
 
 
 class TestRegisterUserUseCase:
@@ -25,11 +29,8 @@ class TestRegisterUserUseCase:
         mock_user_repository: Mock,
     ) -> RegisterUserUseCase:
         """Create a register user use case instance."""
-        from src.domain.services import PasswordHasher
-
         return RegisterUserUseCase(
             user_repository=mock_user_repository,
-            password_hasher=PasswordHasher(),
         )
 
     @pytest.mark.asyncio
@@ -43,30 +44,31 @@ class TestRegisterUserUseCase:
         email = "newuser@example.com"
         password = "SecurePassword123!"
         name = "New User"
-        role = UserRole.viewer()
+        role = "viewer"
 
-        mock_user_repository.exists_with_email = AsyncMock(return_value=False)
+        mock_user_repository.find_by_email = AsyncMock(return_value=None)
         mock_user_repository.save = AsyncMock()
 
         # Act
-        result = await register_user_use_case.execute(
+        input_data = RegisterUserInput(
             email=email,
             password=password,
             name=name,
             role=role,
         )
+        result = await register_user_use_case.execute(input_data)
 
         # Assert
-        assert result.email.value == email
-        assert result.name == name
-        assert result.role == role
-        assert result.is_active is True
-        assert result.is_email_verified is False
-        assert result.verify_password(password) is True
+        assert isinstance(result, RegisterUserOutput)
+        assert result.success is True
+        assert result.user.email.value == email
+        assert result.user.name == name
+        assert result.user.role.name.value == role
+        assert result.user.is_active is True
+        assert result.user.is_email_verified is False
+        assert result.user.verify_password(password) is True
 
-        mock_user_repository.exists_with_email.assert_called_once_with(
-            Email(value=email)
-        )
+        mock_user_repository.find_by_email.assert_called_once_with(Email(value=email))
         mock_user_repository.save.assert_called_once()
 
         # Verify saved user
@@ -87,17 +89,20 @@ class TestRegisterUserUseCase:
         password = "SecurePassword123!"
         name = "Existing User"
 
-        mock_user_repository.exists_with_email = AsyncMock(return_value=True)
+        # Create a mock existing user
+        existing_user = Mock()
+        mock_user_repository.find_by_email = AsyncMock(return_value=existing_user)
 
         # Act & Assert
         with pytest.raises(UserAlreadyExistsException):
-            await register_user_use_case.execute(
+            input_data = RegisterUserInput(
                 email=email,
                 password=password,
                 name=name,
             )
+            await register_user_use_case.execute(input_data)
 
-        mock_user_repository.exists_with_email.assert_called_once()
+        mock_user_repository.find_by_email.assert_called_once()
         mock_user_repository.save.assert_not_called()
 
     @pytest.mark.asyncio
@@ -112,19 +117,20 @@ class TestRegisterUserUseCase:
         password = "SecurePassword123!"
         name = "Default Role User"
 
-        mock_user_repository.exists_with_email = AsyncMock(return_value=False)
+        mock_user_repository.find_by_email = AsyncMock(return_value=None)
         mock_user_repository.save = AsyncMock()
 
         # Act
-        result = await register_user_use_case.execute(
+        input_data = RegisterUserInput(
             email=email,
             password=password,
             name=name,
             # No role specified, should use default
         )
+        result = await register_user_use_case.execute(input_data)
 
         # Assert
-        assert result.role.name.value == "viewer"  # Default role
+        assert result.user.role.name.value == "viewer"  # Default role
 
     @pytest.mark.asyncio
     async def test_register_user_with_admin_role(
@@ -137,22 +143,22 @@ class TestRegisterUserUseCase:
         email = "admin@example.com"
         password = "AdminPassword123!"
         name = "Admin User"
-        role = UserRole.admin()
+        role = "admin"
 
-        mock_user_repository.exists_with_email = AsyncMock(return_value=False)
+        mock_user_repository.find_by_email = AsyncMock(return_value=None)
         mock_user_repository.save = AsyncMock()
 
         # Act
-        result = await register_user_use_case.execute(
+        input_data = RegisterUserInput(
             email=email,
             password=password,
             name=name,
             role=role,
         )
+        result = await register_user_use_case.execute(input_data)
 
         # Assert
-        assert result.role == role
-        assert result.role.name.value == "admin"
+        assert result.user.role.name.value == "admin"
 
     @pytest.mark.asyncio
     async def test_register_user_password_hashing(
@@ -166,23 +172,24 @@ class TestRegisterUserUseCase:
         password = "PlainTextPassword123!"
         name = "Hashing Test User"
 
-        mock_user_repository.exists_with_email = AsyncMock(return_value=False)
+        mock_user_repository.find_by_email = AsyncMock(return_value=None)
         mock_user_repository.save = AsyncMock()
 
         # Act
-        result = await register_user_use_case.execute(
+        input_data = RegisterUserInput(
             email=email,
             password=password,
             name=name,
         )
+        result = await register_user_use_case.execute(input_data)
 
         # Assert
         # Password should be hashed, not plain text
-        assert result.hashed_password.value != password
-        assert len(result.hashed_password.value) > 0
+        assert result.user.hashed_password.value != password
+        assert len(result.user.hashed_password.value) > 0
         # But should still verify correctly
-        assert result.verify_password(password) is True
-        assert result.verify_password("WrongPassword") is False
+        assert result.user.verify_password(password) is True
+        assert result.user.verify_password("WrongPassword") is False
 
     @pytest.mark.asyncio
     async def test_register_user_generates_unique_id(
@@ -192,23 +199,25 @@ class TestRegisterUserUseCase:
     ) -> None:
         """Test that each registered user gets a unique ID."""
         # Arrange
-        mock_user_repository.exists_with_email = AsyncMock(return_value=False)
+        mock_user_repository.find_by_email = AsyncMock(return_value=None)
         mock_user_repository.save = AsyncMock()
 
         # Act - Register two users
-        result1 = await register_user_use_case.execute(
+        input_data1 = RegisterUserInput(
             email="user1@example.com",
             password="Password123!",
             name="User 1",
         )
+        result1 = await register_user_use_case.execute(input_data1)
 
-        result2 = await register_user_use_case.execute(
+        input_data2 = RegisterUserInput(
             email="user2@example.com",
             password="Password123!",
             name="User 2",
         )
+        result2 = await register_user_use_case.execute(input_data2)
 
         # Assert
-        assert result1.id != result2.id
-        assert len(result1.id.value) == 36  # UUID format
-        assert len(result2.id.value) == 36
+        assert result1.user.id != result2.user.id
+        assert len(result1.user.id.value) == 36  # UUID format
+        assert len(result2.user.id.value) == 36

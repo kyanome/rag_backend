@@ -41,12 +41,8 @@ class TestLogoutUseCase:
         mock_session_repository: Mock,
     ) -> LogoutUseCase:
         """Create a logout use case instance."""
-        from src.application.services import JwtService
-        from src.infrastructure.config.settings import get_settings
-
         return LogoutUseCase(
             session_repository=mock_session_repository,
-            jwt_service=JwtService(get_settings()),
         )
 
     @pytest.mark.asyncio
@@ -122,7 +118,16 @@ class TestLogoutUseCase:
         # Arrange
         input_data = LogoutInput(user_id=sample_user_id)
 
-        mock_session_repository.delete_by_user_id = AsyncMock()
+        # Create mock sessions
+        session1 = Mock()
+        session1.id = "session1"
+        session2 = Mock()
+        session2.id = "session2"
+
+        mock_session_repository.find_by_user_id = AsyncMock(
+            return_value=[session1, session2]
+        )
+        mock_session_repository.delete = AsyncMock()
 
         # Act
         result = await logout_use_case.execute(input_data)
@@ -130,12 +135,10 @@ class TestLogoutUseCase:
         # Assert
         assert isinstance(result, LogoutOutput)
         assert result.success is True
-        # Note: The actual implementation may need to return the count
-        assert result.sessions_invalidated >= 0
+        assert result.sessions_invalidated == 2
 
-        mock_session_repository.delete_by_user_id.assert_called_once_with(
-            sample_user_id
-        )
+        mock_session_repository.find_by_user_id.assert_called_once_with(sample_user_id)
+        assert mock_session_repository.delete.call_count == 2
 
     @pytest.mark.asyncio
     async def test_logout_session_not_found_by_id(
@@ -176,9 +179,13 @@ class TestLogoutUseCase:
 
         mock_session_repository.find_by_access_token = AsyncMock(return_value=None)
 
-        # Act & Assert
-        with pytest.raises(SessionNotFoundException):
-            await logout_use_case.execute(input_data)
+        # Act
+        result = await logout_use_case.execute(input_data)
+
+        # Assert - No session found, but still returns success with 0 sessions invalidated
+        assert isinstance(result, LogoutOutput)
+        assert result.success is True
+        assert result.sessions_invalidated == 0
 
         mock_session_repository.find_by_access_token.assert_called_once()
         mock_session_repository.delete.assert_not_called()

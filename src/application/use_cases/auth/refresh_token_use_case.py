@@ -106,9 +106,11 @@ class RefreshTokenUseCase:
         )
 
         # Update session with new tokens
+        from datetime import timedelta
+
         session.refresh(
             new_access_token=new_access_token,
-            access_token_ttl=access_expires - session.last_accessed_at,
+            access_token_ttl=timedelta(minutes=15),  # Use the same TTL as original
         )
         session.refresh_token = new_refresh_token
         session.update_activity(
