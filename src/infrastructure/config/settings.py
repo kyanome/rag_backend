@@ -61,6 +61,24 @@ class Settings(BaseSettings):
         default=30, description="リフレッシュトークン有効期限（日）"
     )
 
+    # CORS Configuration
+    cors_allowed_origins: list[str] = Field(
+        default=["http://localhost:3000"],
+        description="許可されたCORSオリジンのリスト",
+    )
+    cors_allow_credentials: bool = Field(
+        default=True,
+        description="CORSでクレデンシャル（Cookie、認証ヘッダー）を許可",
+    )
+    cors_allow_methods: list[str] = Field(
+        default=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        description="許可されたHTTPメソッド",
+    )
+    cors_allow_headers: list[str] = Field(
+        default=["*"],
+        description="許可されたHTTPヘッダー",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -99,6 +117,25 @@ class Settings(BaseSettings):
             )
         elif len(v) < 32:
             raise ValueError("JWT secret key must be at least 32 characters long")
+        return v
+
+    @field_validator("cors_allowed_origins")
+    @classmethod
+    def validate_cors_origins(cls, v: list[str]) -> list[str]:
+        """CORSオリジンのバリデーション。"""
+        if "*" in v and len(v) > 1:
+            raise ValueError(
+                "CORS: Cannot use wildcard '*' with other specific origins"
+            )
+        # Production環境では具体的なオリジンを指定すべき
+        if "*" in v:
+            import warnings
+
+            warnings.warn(
+                "Using wildcard '*' for CORS origins. This is insecure in production!",
+                UserWarning,
+                stacklevel=2,
+            )
         return v
 
     def ensure_file_storage_path(self) -> None:

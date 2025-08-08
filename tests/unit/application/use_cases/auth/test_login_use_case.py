@@ -1,6 +1,7 @@
 """Tests for login use case."""
 
 import uuid
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -85,10 +86,16 @@ class TestLoginUseCase:
 
         access_token = "test_access_token"
         refresh_token = "test_refresh_token"
+        access_expires = datetime.now(UTC) + timedelta(minutes=15)
+        refresh_expires = datetime.now(UTC) + timedelta(days=30)
 
         mock_user_repository.find_by_email = AsyncMock(return_value=sample_user)
-        mock_jwt_service.create_access_token = Mock(return_value=(access_token, None))
-        mock_jwt_service.create_refresh_token = Mock(return_value=(refresh_token, None))
+        mock_jwt_service.create_access_token = Mock(
+            return_value=(access_token, access_expires)
+        )
+        mock_jwt_service.create_refresh_token = Mock(
+            return_value=(refresh_token, refresh_expires)
+        )
         mock_session_repository.save = AsyncMock()
 
         # Act
@@ -105,7 +112,8 @@ class TestLoginUseCase:
             Email(value=input_data.email)
         )
         mock_jwt_service.create_access_token.assert_called_once()
-        mock_jwt_service.create_refresh_token.assert_called_once()
+        # create_refresh_token is called twice: once with empty session_id, once with actual session_id
+        assert mock_jwt_service.create_refresh_token.call_count == 2
         mock_session_repository.save.assert_called_once()
 
         # Verify session was created correctly
@@ -208,8 +216,14 @@ class TestLoginUseCase:
 
         mock_user_repository.find_by_email = AsyncMock(return_value=sample_user)
         mock_user_repository.update = AsyncMock()
-        mock_jwt_service.create_access_token = Mock(return_value=("token", None))
-        mock_jwt_service.create_refresh_token = Mock(return_value=("refresh", None))
+        access_expires = datetime.now(UTC) + timedelta(minutes=15)
+        refresh_expires = datetime.now(UTC) + timedelta(days=30)
+        mock_jwt_service.create_access_token = Mock(
+            return_value=("token", access_expires)
+        )
+        mock_jwt_service.create_refresh_token = Mock(
+            return_value=("refresh", refresh_expires)
+        )
         mock_session_repository.save = AsyncMock()
 
         # Act
@@ -238,8 +252,14 @@ class TestLoginUseCase:
         )
 
         mock_user_repository.find_by_email = AsyncMock(return_value=sample_user)
-        mock_jwt_service.create_access_token = Mock(return_value=("token", None))
-        mock_jwt_service.create_refresh_token = Mock(return_value=("refresh", None))
+        access_expires = datetime.now(UTC) + timedelta(minutes=15)
+        refresh_expires = datetime.now(UTC) + timedelta(days=30)
+        mock_jwt_service.create_access_token = Mock(
+            return_value=("token", access_expires)
+        )
+        mock_jwt_service.create_refresh_token = Mock(
+            return_value=("refresh", refresh_expires)
+        )
         mock_session_repository.save = AsyncMock()
 
         # Act

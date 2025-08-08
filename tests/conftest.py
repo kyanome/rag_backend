@@ -38,7 +38,8 @@ async def async_session() -> AsyncGenerator[AsyncSession, None]:
 @pytest.fixture
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """Create async database session for testing (alias for async_session)."""
-    from src.infrastructure.database.connection import Base
+    # Import all models to ensure they are registered
+    from src.infrastructure.database.models import Base
 
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 

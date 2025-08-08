@@ -3,7 +3,7 @@
 from pydantic import BaseModel, Field, field_validator
 
 from ..exceptions.document_exceptions import DocumentValidationError
-from ..value_objects import DocumentChunk, DocumentId, DocumentMetadata
+from ..value_objects import DocumentChunk, DocumentId, DocumentMetadata, UserId
 
 
 class Document(BaseModel):
@@ -16,6 +16,7 @@ class Document(BaseModel):
         metadata: 文書のメタデータ
         chunks: 文書のチャンクリスト
         version: 文書のバージョン
+        owner_id: 文書の所有者ID（オプション）
     """
 
     id: DocumentId = Field(..., description="文書の一意識別子")
@@ -26,6 +27,7 @@ class Document(BaseModel):
         default_factory=list, description="文書のチャンクリスト"
     )
     version: int = Field(default=1, ge=1, description="文書のバージョン")
+    owner_id: UserId | None = Field(default=None, description="文書の所有者ID")
 
     model_config = {"validate_assignment": True}
 
@@ -46,6 +48,7 @@ class Document(BaseModel):
         content: bytes,
         metadata: DocumentMetadata,
         document_id: DocumentId | None = None,
+        owner_id: UserId | None = None,
     ) -> "Document":
         """新しい文書を作成する。
 
@@ -54,6 +57,7 @@ class Document(BaseModel):
             content: 文書の内容
             metadata: 文書のメタデータ
             document_id: 文書ID（指定しない場合は自動生成）
+            owner_id: 文書の所有者ID（オプション）
 
         Returns:
             新しいDocumentインスタンス
@@ -65,6 +69,7 @@ class Document(BaseModel):
             metadata=metadata,
             chunks=[],
             version=1,
+            owner_id=owner_id,
         )
 
     def add_chunk(self, chunk: DocumentChunk) -> None:

@@ -25,7 +25,12 @@ class TestRegisterUserUseCase:
         mock_user_repository: Mock,
     ) -> RegisterUserUseCase:
         """Create a register user use case instance."""
-        return RegisterUserUseCase(user_repository=mock_user_repository)
+        from src.domain.services import PasswordHasher
+
+        return RegisterUserUseCase(
+            user_repository=mock_user_repository,
+            password_hasher=PasswordHasher(),
+        )
 
     @pytest.mark.asyncio
     async def test_register_user_successful(

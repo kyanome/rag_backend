@@ -82,6 +82,9 @@ class DocumentModel(Base):
     content = Column(Text, nullable=False)  # バイナリデータはBase64エンコードして保存
     document_metadata = Column(JSON, nullable=False)
     version = Column(Integer, default=1, nullable=False)
+    owner_id: Column[uuid.UUID | None] = Column(
+        UUID(), ForeignKey("users.id"), nullable=True
+    )
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     updated_at = Column(
         DateTime,
@@ -94,6 +97,7 @@ class DocumentModel(Base):
     chunks = relationship(
         "DocumentChunkModel", back_populates="document", cascade="all, delete-orphan"
     )
+    owner = relationship("UserModel", back_populates="documents")
 
     def to_domain(self) -> DomainDocument:
         """ドメインエンティティに変換する。
@@ -123,6 +127,7 @@ class DocumentModel(Base):
             metadata=document_metadata,
             chunks=[],
             version=self.version,  # type: ignore[arg-type]
+            owner_id=UserId(str(self.owner_id)) if self.owner_id else None,
         )
 
         # チャンクの追加
@@ -162,6 +167,7 @@ class DocumentModel(Base):
             ),
             document_metadata=metadata_dict,
             version=document.version,
+            owner_id=uuid.UUID(document.owner_id.value) if document.owner_id else None,
             created_at=document.metadata.created_at,
             updated_at=document.metadata.updated_at,
         )
@@ -269,6 +275,7 @@ class UserModel(Base):
     sessions = relationship(
         "SessionModel", back_populates="user", cascade="all, delete-orphan"
     )
+    documents = relationship("DocumentModel", back_populates="owner")
 
     def to_domain(self) -> DomainUser:
         """ドメインエンティティに変換する。

@@ -47,6 +47,7 @@ from ...dependencies import (
     get_update_document_use_case,
     get_upload_document_use_case,
 )
+from ..dependencies.auth import OptionalAuth
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -254,6 +255,7 @@ async def upload_document(
     tags: Annotated[str | None, Form(description="タグ（カンマ区切り）")] = None,
     author: Annotated[str | None, Form(description="作成者")] = None,
     description: Annotated[str | None, Form(description="文書の説明")] = None,
+    current_user: OptionalAuth = None,
     use_case: UploadDocumentUseCase = Depends(get_upload_document_use_case),
 ) -> DocumentUploadResponse:
     """文書をアップロードする。
@@ -292,8 +294,9 @@ async def upload_document(
             title=title,
             category=category,
             tags=tag_list,
-            author=author,
+            author=author or (current_user.name if current_user else None),
             description=description,
+            owner_id=current_user.id if current_user else None,
         )
 
         # ユースケースを実行
@@ -355,6 +358,7 @@ async def get_document_list(
     ] = None,
     category: Annotated[str | None, Query(description="カテゴリ")] = None,
     tags: Annotated[str | None, Query(description="タグ（カンマ区切り）")] = None,
+    current_user: OptionalAuth = None,
     use_case: GetDocumentListUseCase = Depends(get_get_document_list_use_case),
 ) -> DocumentListResponse:
     """文書一覧を取得する。
@@ -443,6 +447,7 @@ async def get_document_list(
 )
 async def get_document(
     document_id: str,
+    current_user: OptionalAuth = None,
     use_case: GetDocumentUseCase = Depends(get_get_document_use_case),
 ) -> DocumentDetailResponse:
     """文書詳細を取得する。
@@ -507,6 +512,7 @@ async def get_document(
 async def update_document(
     document_id: str,
     request: DocumentUpdateRequest,
+    current_user: OptionalAuth = None,
     use_case: UpdateDocumentUseCase = Depends(get_update_document_use_case),
 ) -> DocumentUpdateResponse:
     """文書を更新する。
@@ -586,6 +592,7 @@ async def update_document(
 )
 async def delete_document(
     document_id: str,
+    current_user: OptionalAuth = None,
     use_case: DeleteDocumentUseCase = Depends(get_delete_document_use_case),
 ) -> None:
     """文書を削除する。

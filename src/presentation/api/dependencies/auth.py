@@ -17,6 +17,8 @@ from ....infrastructure.database import get_user_repository
 
 # Security scheme for JWT Bearer tokens
 security = HTTPBearer()
+# Optional security scheme (does not raise error if no credentials)
+optional_security = HTTPBearer(auto_error=False)
 
 
 async def get_jwt_service() -> JwtService:
@@ -170,3 +172,50 @@ def require_permission(permission: Permission | list[Permission]) -> Callable:
         return current_user
 
     return permission_checker
+
+
+async def get_optional_current_user(
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None, Depends(optional_security)
+    ],
+    jwt_service: Annotated[JwtService, Depends(get_jwt_service)],
+    user_repository: Annotated[UserRepository, Depends(get_user_repository)],
+) -> User | None:
+    """Get current user if authenticated, otherwise return None.
+
+    This is for endpoints that work with or without authentication.
+
+    Args:
+        credentials: Optional HTTP Bearer credentials
+        jwt_service: JWT service instance
+        user_repository: User repository instance
+
+    Returns:
+        Current user if authenticated, None otherwise
+    """
+    # No credentials provided, return None
+    if not credentials:
+        return None
+
+    try:
+        # Try to extract and validate user
+        token = credentials.credentials
+        # Verify it's an access token and extract user ID
+        payload = jwt_service.verify_access_token(token)
+        user_id_str = payload.get("sub")
+        if not user_id_str:
+            return None
+
+        user_id = UserId(user_id_str)
+        user = await user_repository.find_by_id(user_id)
+        if not user or not user.is_active:
+            return None
+
+        return user
+    except (JWTError, ValueError, UserNotFoundException):
+        # Authentication failed, return None for optional auth
+        return None
+
+
+# Optional authentication dependency
+OptionalAuth = Annotated[User | None, Depends(get_optional_current_user)]

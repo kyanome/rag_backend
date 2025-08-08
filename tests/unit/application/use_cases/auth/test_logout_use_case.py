@@ -41,7 +41,13 @@ class TestLogoutUseCase:
         mock_session_repository: Mock,
     ) -> LogoutUseCase:
         """Create a logout use case instance."""
-        return LogoutUseCase(session_repository=mock_session_repository)
+        from src.application.services import JwtService
+        from src.infrastructure.config.settings import get_settings
+
+        return LogoutUseCase(
+            session_repository=mock_session_repository,
+            jwt_service=JwtService(get_settings()),
+        )
 
     @pytest.mark.asyncio
     async def test_logout_by_session_id_successful(

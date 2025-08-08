@@ -7,6 +7,10 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from src.application.use_cases.auth import RefreshTokenUseCase
+from src.application.use_cases.auth.refresh_token_use_case import (
+    RefreshTokenInput,
+    RefreshTokenOutput,
+)
 from src.domain.entities import Session, User
 from src.domain.exceptions.auth_exceptions import (
     InvalidTokenException,
@@ -48,13 +52,25 @@ class TestRefreshTokenUseCase:
     @pytest.fixture
     def sample_session(self, sample_user: User) -> Session:
         """Create a sample session."""
-        return Session.create(
+        from src.application.services import JwtService
+        from src.infrastructure.config.settings import get_settings
+
+        jwt_service = JwtService(get_settings())
+        session_id = str(uuid.uuid4())
+        access_token, _ = jwt_service.create_access_token(
+            sample_user.id, sample_user.email.value, sample_user.role
+        )
+        refresh_token, _ = jwt_service.create_refresh_token(sample_user.id, session_id)
+
+        session = Session.create(
             user_id=sample_user.id,
-            access_token="old_access_" + str(uuid.uuid4()),
-            refresh_token="refresh_" + str(uuid.uuid4()),
+            access_token=access_token,
+            refresh_token=refresh_token,
             access_token_ttl=timedelta(minutes=15),
             refresh_token_ttl=timedelta(days=30),
         )
+        session.id = session_id  # Set the session ID
+        return session
 
     @pytest.fixture
     def refresh_token_use_case(
@@ -63,9 +79,13 @@ class TestRefreshTokenUseCase:
         mock_session_repository: Mock,
     ) -> RefreshTokenUseCase:
         """Create a refresh token use case instance."""
+        from src.application.services import JwtService
+        from src.infrastructure.config.settings import get_settings
+
         return RefreshTokenUseCase(
             user_repository=mock_user_repository,
             session_repository=mock_session_repository,
+            jwt_service=JwtService(get_settings()),
         )
 
     @pytest.mark.asyncio
@@ -81,32 +101,31 @@ class TestRefreshTokenUseCase:
         # Arrange
         refresh_token = sample_session.refresh_token
 
-        mock_session_repository.find_by_refresh_token = AsyncMock(
+        mock_session_repository.find_by_id = AsyncMock(
             return_value=sample_session
         )
         mock_user_repository.find_by_id = AsyncMock(return_value=sample_user)
-        mock_session_repository.update = AsyncMock()
+        mock_session_repository.save = AsyncMock()
 
         # Act
-        result = await refresh_token_use_case.execute(refresh_token=refresh_token)
+        input_data = RefreshTokenInput(refresh_token=refresh_token)
+        result = await refresh_token_use_case.execute(input_data)
 
         # Assert
+        assert isinstance(result, RefreshTokenOutput)
         assert result.access_token != sample_session.access_token  # New token
-        assert result.refresh_token == sample_session.refresh_token  # Same refresh
-        assert result.user_id == sample_user.id
-        assert result.email == sample_user.email
-        assert result.role == sample_user.role
+        assert result.refresh_token != sample_session.refresh_token  # New refresh token
 
-        mock_session_repository.find_by_refresh_token.assert_called_once_with(
-            refresh_token
+        mock_session_repository.find_by_id.assert_called_once_with(
+            sample_session.id
         )
         mock_user_repository.find_by_id.assert_called_once_with(sample_user.id)
-        mock_session_repository.update.assert_called_once()
+        mock_session_repository.save.assert_called_once()
 
         # Verify session was updated with new access token
-        updated_session = mock_session_repository.update.call_args[0][0]
-        assert updated_session.access_token != "old_access_" + str(uuid.uuid4())
-        assert updated_session.refresh_token == sample_session.refresh_token
+        updated_session = mock_session_repository.save.call_args[0][0]
+        assert updated_session.access_token != sample_session.access_token
+        assert updated_session.refresh_token != sample_session.refresh_token
 
     @pytest.mark.asyncio
     async def test_refresh_token_session_not_found(
@@ -122,7 +141,8 @@ class TestRefreshTokenUseCase:
 
         # Act & Assert
         with pytest.raises(InvalidTokenException):
-            await refresh_token_use_case.execute(refresh_token=refresh_token)
+            input_data = RefreshTokenInput(refresh_token=refresh_token)
+            await refresh_token_use_case.execute(input_data)
 
         mock_session_repository.find_by_refresh_token.assert_called_once()
 
@@ -148,9 +168,10 @@ class TestRefreshTokenUseCase:
 
         # Act & Assert
         with pytest.raises(SessionExpiredException):
-            await refresh_token_use_case.execute(
+            input_data = RefreshTokenInput(
                 refresh_token=expired_session.refresh_token
             )
+            await refresh_token_use_case.execute(input_data)
 
     @pytest.mark.asyncio
     async def test_refresh_token_user_not_found(
@@ -171,7 +192,8 @@ class TestRefreshTokenUseCase:
 
         # Act & Assert
         with pytest.raises(UserNotFoundException):
-            await refresh_token_use_case.execute(refresh_token=refresh_token)
+            input_data = RefreshTokenInput(refresh_token=refresh_token)
+            await refresh_token_use_case.execute(input_data)
 
     @pytest.mark.asyncio
     async def test_refresh_token_inactive_user(
@@ -194,7 +216,8 @@ class TestRefreshTokenUseCase:
 
         # Act & Assert
         with pytest.raises(InvalidTokenException):
-            await refresh_token_use_case.execute(refresh_token=refresh_token)
+            input_data = RefreshTokenInput(refresh_token=refresh_token)
+            await refresh_token_use_case.execute(input_data)
 
     @pytest.mark.asyncio
     async def test_refresh_token_updates_activity(
@@ -219,11 +242,12 @@ class TestRefreshTokenUseCase:
         mock_session_repository.update = AsyncMock()
 
         # Act
-        await refresh_token_use_case.execute(
+        input_data = RefreshTokenInput(
             refresh_token=refresh_token,
             ip_address=ip_address,
             user_agent=user_agent,
         )
+        await refresh_token_use_case.execute(input_data)
 
         # Assert
         updated_session = mock_session_repository.update.call_args[0][0]

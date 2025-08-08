@@ -31,7 +31,9 @@ class TestAuthAPI:
     @pytest.fixture
     def jwt_service(self) -> JwtService:
         """Create a JWT service."""
-        return JwtService()
+        from src.infrastructure.config.settings import get_settings
+
+        return JwtService(get_settings())
 
     @pytest.fixture
     async def test_user(
@@ -61,7 +63,8 @@ class TestAuthAPI:
         access_token, _ = jwt_service.create_access_token(
             test_user.id, test_user.email.value, test_user.role
         )
-        refresh_token, _ = jwt_service.create_refresh_token(test_user.id)
+        session_id = str(uuid.uuid4())
+        refresh_token, _ = jwt_service.create_refresh_token(test_user.id, session_id)
 
         session = Session.create(
             user_id=test_user.id,
