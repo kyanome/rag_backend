@@ -11,6 +11,7 @@ from .hashed_password import HashedPassword
 from .page_info import PageInfo
 from .user_id import UserId
 from .user_role import Permission, RoleName, UserRole
+from .vector_search_result import VectorSearchResult
 
 __all__ = [
     "DocumentId",
@@ -26,4 +27,5 @@ __all__ = [
     "RoleName",
     "UserId",
     "UserRole",
+    "VectorSearchResult",
 ]
