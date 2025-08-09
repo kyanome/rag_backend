@@ -4,12 +4,15 @@ from functools import lru_cache
 
 from ....application.use_cases.generate_embeddings import GenerateEmbeddingsUseCase
 from ....domain.externals import EmbeddingService
-from ....domain.repositories import DocumentRepository
+from ....domain.repositories import DocumentRepository, VectorSearchRepository
 from ....infrastructure.config.settings import get_settings
 from ....infrastructure.externals.embeddings import (
     EmbeddingServiceFactory,
 )
-from ....infrastructure.repositories import DocumentRepositoryImpl
+from ....infrastructure.repositories import (
+    DocumentRepositoryImpl,
+    PgVectorRepositoryImpl,
+)
 from ...dependencies import get_db_session
 
 
@@ -57,7 +60,13 @@ async def get_generate_embeddings_use_case() -> GenerateEmbeddingsUseCase:
     )
     embedding_service = get_embedding_service()
 
+    # ベクトル検索リポジトリを取得（PostgreSQLの場合のみ）
+    vector_search_repository: VectorSearchRepository | None = None
+    if "postgresql" in settings.database_url:
+        vector_search_repository = PgVectorRepositoryImpl(db_session)
+
     return GenerateEmbeddingsUseCase(
         document_repository=document_repository,
         embedding_service=embedding_service,
+        vector_search_repository=vector_search_repository,
     )
