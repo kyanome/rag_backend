@@ -1,5 +1,10 @@
 """Application use cases."""
 
+from .chunk_document import (
+    ChunkDocumentInput,
+    ChunkDocumentOutput,
+    ChunkDocumentUseCase,
+)
 from .delete_document import DeleteDocumentInput, DeleteDocumentUseCase
 from .get_document import GetDocumentInput, GetDocumentOutput, GetDocumentUseCase
 from .get_document_list import (
@@ -19,6 +24,9 @@ from .upload_document import (
 )
 
 __all__ = [
+    "ChunkDocumentInput",
+    "ChunkDocumentOutput",
+    "ChunkDocumentUseCase",
     "UploadDocumentInput",
     "UploadDocumentOutput",
     "UploadDocumentUseCase",
