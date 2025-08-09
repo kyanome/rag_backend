@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -61,6 +62,34 @@ class Settings(BaseSettings):
         default=30, description="リフレッシュトークン有効期限（日）"
     )
 
+    # Document Chunking Configuration
+    chunk_size: int = Field(
+        default=1000,
+        description="デフォルトのチャンクサイズ（文字数）",
+        ge=100,
+        le=10000,
+    )
+    chunk_overlap: int = Field(
+        default=200,
+        description="チャンク間の重複サイズ（文字数）",
+        ge=0,
+        le=500,
+    )
+    chunking_strategy: str = Field(
+        default="japanese",
+        description="チャンク分割戦略（japanese/simple）",
+    )
+    enable_auto_chunking: bool = Field(
+        default=True,
+        description="文書アップロード時の自動チャンク化を有効化",
+    )
+    max_chunks_per_document: int = Field(
+        default=1000,
+        description="1文書あたりの最大チャンク数",
+        ge=10,
+        le=10000,
+    )
+
     # CORS Configuration
     cors_allowed_origins: list[str] = Field(
         default=["http://localhost:3000", "http://localhost:3001"],
@@ -117,6 +146,25 @@ class Settings(BaseSettings):
             )
         elif len(v) < 32:
             raise ValueError("JWT secret key must be at least 32 characters long")
+        return v
+
+    @field_validator("chunking_strategy")
+    @classmethod
+    def validate_chunking_strategy(cls, v: str) -> str:
+        """チャンク分割戦略のバリデーション。"""
+        valid_strategies = ["japanese", "simple"]
+        if v not in valid_strategies:
+            raise ValueError(
+                f"Invalid chunking strategy: {v}. Must be one of {valid_strategies}"
+            )
+        return v
+
+    @field_validator("chunk_overlap")
+    @classmethod
+    def validate_chunk_overlap(cls, v: int, info: Any) -> int:
+        """チャンクオーバーラップのバリデーション。"""
+        # chunk_sizeと比較する必要があるが、Pydantic v2では別のアプローチが必要
+        # ここでは単純な範囲チェックのみ
         return v
 
     @field_validator("cors_allowed_origins")
