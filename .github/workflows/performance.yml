@@ -1,0 +1,217 @@
+name: Performance Tests
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'tests/benchmarks/**'
+      - '.github/workflows/performance.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'tests/benchmarks/**'
+  workflow_dispatch:
+
+jobs:
+  performance-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: raguser
+          POSTGRES_PASSWORD: ragpassword
+          POSTGRES_DB: ragdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+      with:
+        version: 'latest'
+    
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/uv
+          .venv
+        key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml', '**/uv.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-
+    
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+    
+    - name: Run database migrations
+      env:
+        DATABASE_URL: postgresql+asyncpg://raguser:ragpassword@localhost:5432/ragdb
+      run: |
+        uv run alembic upgrade head
+    
+    - name: Run performance benchmarks
+      env:
+        DATABASE_URL: postgresql+asyncpg://raguser:ragpassword@localhost:5432/ragdb
+        EMBEDDING_PROVIDER: mock
+      run: |
+        uv run pytest tests/benchmarks/ \
+          -v \
+          --benchmark-only \
+          --benchmark-json=benchmark_results.json \
+          --benchmark-autosave \
+          --benchmark-max-time=5 \
+          --benchmark-min-rounds=5
+    
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-results
+        path: |
+          .benchmarks/
+          benchmark_results.json
+    
+    - name: Comment on PR with results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const results = JSON.parse(fs.readFileSync('benchmark_results.json', 'utf8'));
+          
+          let comment = '## 🚀 Performance Test Results\n\n';
+          comment += '| Test | Mean | Min | Max | StdDev |\n';
+          comment += '|------|------|-----|-----|--------|\n';
+          
+          for (const benchmark of results.benchmarks) {
+            comment += `| ${benchmark.name} | ${benchmark.stats.mean.toFixed(3)}s | ${benchmark.stats.min.toFixed(3)}s | ${benchmark.stats.max.toFixed(3)}s | ${benchmark.stats.stddev.toFixed(3)}s |\n`;
+          }
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+    
+    - name: Check performance regression
+      if: github.event_name == 'pull_request'
+      run: |
+        # Compare with baseline if exists
+        if [ -f .benchmarks/baseline.json ]; then
+          uv run python scripts/check_performance_regression.py \
+            --baseline .benchmarks/baseline.json \
+            --current benchmark_results.json \
+            --threshold 20
+        fi
+    
+    - name: Store baseline for main branch
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        mkdir -p .benchmarks
+        cp benchmark_results.json .benchmarks/baseline.json
+        
+        # Commit baseline if changed
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .benchmarks/baseline.json
+        git diff --staged --quiet || git commit -m "chore: update performance baseline"
+        git push || true
+
+  load-test:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: raguser
+          POSTGRES_PASSWORD: ragpassword
+          POSTGRES_DB: ragdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+    
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+        uv add locust
+    
+    - name: Start application
+      env:
+        DATABASE_URL: postgresql+asyncpg://raguser:ragpassword@localhost:5432/ragdb
+        EMBEDDING_PROVIDER: mock
+      run: |
+        uv run alembic upgrade head
+        uv run uvicorn src.presentation.main:app --host 0.0.0.0 --port 8000 &
+        sleep 10  # Wait for server to start
+    
+    - name: Run load test
+      run: |
+        uv run locust \
+          --host http://localhost:8000 \
+          --users 100 \
+          --spawn-rate 10 \
+          --run-time 5m \
+          --headless \
+          --html load_test_report.html \
+          --csv load_test
+    
+    - name: Upload load test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: load-test-results
+        path: |
+          load_test_report.html
+          load_test_*.csv
+    
+    - name: Check load test thresholds
+      run: |
+        # Check if 95th percentile response time is under 2 seconds
+        python -c "
+        import csv
+        with open('load_test_stats.csv', 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row['Name'] == 'Aggregated':
+                    p95 = float(row['95%'])
+                    if p95 > 2000:  # milliseconds
+                        print(f'❌ 95th percentile ({p95}ms) exceeds 2000ms threshold')
+                        exit(1)
+                    print(f'✅ 95th percentile ({p95}ms) within threshold')
+        "
