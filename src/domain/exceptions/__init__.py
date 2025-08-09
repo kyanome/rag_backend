@@ -18,6 +18,13 @@ from .document_exceptions import (
     DocumentValidationError,
     InvalidDocumentError,
 )
+from .embedding_exceptions import (
+    EmbeddingException,
+    EmbeddingGenerationError,
+    EmbeddingServiceError,
+    InvalidTextError,
+    ModelNotAvailableError,
+)
 
 __all__ = [
     # Base
@@ -38,4 +45,10 @@ __all__ = [
     "SessionExpiredException",
     "UserAlreadyExistsException",
     "UserNotFoundException",
+    # Embedding
+    "EmbeddingException",
+    "EmbeddingGenerationError",
+    "EmbeddingServiceError",
+    "InvalidTextError",
+    "ModelNotAvailableError",
 ]
