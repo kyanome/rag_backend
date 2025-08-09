@@ -56,6 +56,11 @@ class User:
         """Verify a plain password against the user's hashed password."""
         return self.hashed_password.verify(plain_password)
 
+    @property
+    def password(self) -> HashedPassword:
+        """Get the user's hashed password (alias for compatibility)."""
+        return self.hashed_password
+
     def update_password(self, new_hashed_password: HashedPassword) -> None:
         """Update the user's password."""
         if not isinstance(new_hashed_password, HashedPassword):
@@ -71,6 +76,16 @@ class User:
 
         self.email = new_email
         self.is_email_verified = False
+        self.updated_at = datetime.now(UTC)
+
+    def update_name(self, new_name: str) -> None:
+        """Update the user's name."""
+        if not new_name or not new_name.strip():
+            raise ValueError("Name cannot be empty")
+        if len(new_name) > 255:
+            raise ValueError("Name cannot exceed 255 characters")
+
+        self.name = new_name.strip()
         self.updated_at = datetime.now(UTC)
 
     def update_role(self, new_role: UserRole) -> None:
