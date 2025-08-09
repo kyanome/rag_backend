@@ -1,9 +1,10 @@
 """文書アップロードユースケースのテスト。"""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+from src.application.use_cases.chunk_document import ChunkDocumentOutput
 from src.application.use_cases.upload_document import (
     UploadDocumentInput,
     UploadDocumentUseCase,
@@ -27,15 +28,42 @@ class TestUploadDocumentUseCase:
         return mock
 
     @pytest.fixture
+    def mock_chunk_document_use_case(self) -> Mock:
+        """モックのチャンク化ユースケース。"""
+        mock = Mock()
+        chunk_output = ChunkDocumentOutput(
+            document_id="test-doc-id",
+            chunk_count=5,
+            total_characters=1000,
+            status="success",
+        )
+        mock.execute = AsyncMock(return_value=chunk_output)
+        return mock
+
+    @pytest.fixture
     def use_case(
         self,
         mock_document_repository: AsyncMock,
         mock_file_storage_service: AsyncMock,
     ) -> UploadDocumentUseCase:
-        """テスト用のユースケース。"""
+        """テスト用のユースケース（チャンク化なし）。"""
         return UploadDocumentUseCase(
             document_repository=mock_document_repository,
             file_storage_service=mock_file_storage_service,
+        )
+
+    @pytest.fixture
+    def use_case_with_chunking(
+        self,
+        mock_document_repository: AsyncMock,
+        mock_file_storage_service: AsyncMock,
+        mock_chunk_document_use_case: Mock,
+    ) -> UploadDocumentUseCase:
+        """テスト用のユースケース（チャンク化あり）。"""
+        return UploadDocumentUseCase(
+            document_repository=mock_document_repository,
+            file_storage_service=mock_file_storage_service,
+            chunk_document_use_case=mock_chunk_document_use_case,
         )
 
     @pytest.fixture
@@ -195,3 +223,48 @@ class TestUploadDocumentUseCase:
     ) -> None:
         """最大ファイルサイズが100MBであることを確認。"""
         assert use_case.MAX_FILE_SIZE == 100 * 1024 * 1024
+
+    async def test_execute_with_chunking_enabled(
+        self,
+        use_case_with_chunking: UploadDocumentUseCase,
+        valid_input: UploadDocumentInput,
+        mock_document_repository: AsyncMock,
+        mock_file_storage_service: AsyncMock,
+        mock_chunk_document_use_case: Mock,
+    ) -> None:
+        """チャンク化が有効な場合の処理を確認。"""
+        # 実行
+        result = await use_case_with_chunking.execute(valid_input)
+
+        # 検証
+        assert result.title == "Test Document"
+        assert result.chunk_count == 5
+        assert result.chunking_status == "success"
+
+        # チャンク化が呼ばれたことを確認
+        mock_chunk_document_use_case.execute.assert_called_once()
+
+    async def test_execute_with_chunking_failure(
+        self,
+        use_case_with_chunking: UploadDocumentUseCase,
+        valid_input: UploadDocumentInput,
+        mock_document_repository: AsyncMock,
+        mock_file_storage_service: AsyncMock,
+        mock_chunk_document_use_case: Mock,
+    ) -> None:
+        """チャンク化が失敗しても文書アップロードは成功することを確認。"""
+        # チャンク化をエラーにする
+        mock_chunk_document_use_case.execute = AsyncMock(
+            side_effect=Exception("Chunking failed")
+        )
+
+        # 実行
+        result = await use_case_with_chunking.execute(valid_input)
+
+        # 検証 - アップロードは成功
+        assert result.title == "Test Document"
+        assert result.chunk_count == 0
+        assert result.chunking_status == "failed"
+
+        # 文書は保存されている
+        mock_document_repository.save.assert_called_once()
