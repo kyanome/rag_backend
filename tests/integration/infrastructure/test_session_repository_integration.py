@@ -11,13 +11,14 @@ from src.domain.exceptions.auth_exceptions import SessionExpiredException
 from src.domain.services import PasswordHasher
 from src.domain.value_objects import Email, UserId, UserRole
 from src.infrastructure.repositories import SessionRepositoryImpl, UserRepositoryImpl
+from src.infrastructure.services import PasswordHasherImpl
 from tests.fixtures.session_fixtures import create_expired_session
 
 
 @pytest.fixture
 def password_hasher() -> PasswordHasher:
     """Create a password hasher."""
-    return PasswordHasher()
+    return PasswordHasherImpl()
 
 
 @pytest.fixture

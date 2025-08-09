@@ -63,7 +63,7 @@ class Settings(BaseSettings):
 
     # CORS Configuration
     cors_allowed_origins: list[str] = Field(
-        default=["http://localhost:3000"],
+        default=["http://localhost:3000", "http://localhost:3001"],
         description="許可されたCORSオリジンのリスト",
     )
     cors_allow_credentials: bool = Field(

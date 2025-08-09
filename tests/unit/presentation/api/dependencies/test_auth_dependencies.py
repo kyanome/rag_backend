@@ -10,9 +10,9 @@ from fastapi.security import HTTPAuthorizationCredentials
 from src.application.services import JwtService
 from src.domain.entities import User
 from src.domain.repositories import UserRepository
-from src.domain.services import PasswordHasher
 from src.domain.value_objects import Email, UserId, UserRole
 from src.infrastructure.config.settings import Settings
+from src.infrastructure.services import PasswordHasherImpl
 from src.presentation.api.dependencies.auth import (
     get_current_user,
     get_current_user_id,
@@ -42,7 +42,7 @@ class TestAuthDependencies:
     @pytest.fixture
     def sample_user(self) -> User:
         """Create a sample user."""
-        password_hasher = PasswordHasher()
+        password_hasher = PasswordHasherImpl()
         return User(
             id=UserId(value=str(uuid.uuid4())),
             email=Email(value="test@example.com"),

@@ -14,6 +14,7 @@ from src.domain.exceptions.auth_exceptions import AuthenticationException
 from src.domain.repositories import SessionRepository, UserRepository
 from src.domain.services import PasswordHasher
 from src.domain.value_objects import Email, UserId, UserRole
+from src.infrastructure.services import PasswordHasherImpl
 
 
 class TestLoginUseCase:
@@ -37,7 +38,7 @@ class TestLoginUseCase:
     @pytest.fixture
     def password_hasher(self) -> PasswordHasher:
         """Create a password hasher."""
-        return PasswordHasher()
+        return PasswordHasherImpl()
 
     @pytest.fixture
     def sample_user(self, password_hasher: PasswordHasher) -> User:

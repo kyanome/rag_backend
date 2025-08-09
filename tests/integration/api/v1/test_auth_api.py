@@ -13,6 +13,7 @@ from src.domain.entities import Session, User
 from src.domain.services import PasswordHasher
 from src.domain.value_objects import Email, UserId, UserRole
 from src.infrastructure.repositories import SessionRepositoryImpl, UserRepositoryImpl
+from src.infrastructure.services import PasswordHasherImpl
 
 
 class TestAuthAPI:
@@ -69,7 +70,7 @@ class TestAuthAPI:
     @pytest.fixture
     def password_hasher(self) -> PasswordHasher:
         """Create a password hasher."""
-        return PasswordHasher()
+        return PasswordHasherImpl()
 
     @pytest.fixture
     def jwt_service(self) -> JwtService:

@@ -12,12 +12,13 @@ from src.domain.exceptions.auth_exceptions import UserNotFoundException
 from src.domain.services import PasswordHasher
 from src.domain.value_objects import Email, UserId, UserRole
 from src.infrastructure.repositories import UserRepositoryImpl
+from src.infrastructure.services import PasswordHasherImpl
 
 
 @pytest.fixture
 def password_hasher() -> PasswordHasher:
     """Create a password hasher."""
-    return PasswordHasher()
+    return PasswordHasherImpl()
 
 
 @pytest.fixture

@@ -16,8 +16,8 @@ from src.domain.exceptions.auth_exceptions import (
     AuthenticationException,
 )
 from src.domain.repositories import SessionRepository, UserRepository
-from src.domain.services import PasswordHasher
 from src.domain.value_objects import Email, UserId, UserRole
+from src.infrastructure.services import PasswordHasherImpl
 
 
 class TestRefreshTokenUseCase:
@@ -36,7 +36,7 @@ class TestRefreshTokenUseCase:
     @pytest.fixture
     def sample_user(self) -> User:
         """Create a sample user."""
-        password_hasher = PasswordHasher()
+        password_hasher = PasswordHasherImpl()
         return User(
             id=UserId(value=str(uuid.uuid4())),
             email=Email(value="test@example.com"),
