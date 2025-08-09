@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from jose import JWTError  # type: ignore[import-untyped]
+from jose import JWTError
 
 from ....domain.exceptions.auth_exceptions import (
     AuthenticationException,

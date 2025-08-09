@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from jose import JWTError, jwt  # type: ignore[import-untyped]
+from jose import JWTError, jwt
 
 from ...domain.value_objects import UserId, UserRole
 from ...infrastructure.config.settings import Settings
@@ -87,7 +87,7 @@ class JwtService:
         """
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
-            return payload  # type: ignore[no-any-return]
+            return payload
         except JWTError as e:
             raise JWTError(f"Invalid token: {str(e)}") from e
 
