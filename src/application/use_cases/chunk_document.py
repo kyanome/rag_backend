@@ -4,7 +4,7 @@
 """
 
 from ...domain.externals import ChunkingStrategy, EmbeddingService, TextExtractor
-from ...domain.repositories import DocumentRepository
+from ...domain.repositories import DocumentRepository, VectorSearchRepository
 from ...domain.services import ChunkingService
 from ...domain.value_objects import DocumentId
 
@@ -18,6 +18,7 @@ class ChunkDocumentInput:
         chunk_size: int = 1000,
         overlap_size: int = 200,
         generate_embeddings: bool = True,
+        store_in_vector_db: bool = True,
     ) -> None:
         """初期化する。
 
@@ -26,11 +27,13 @@ class ChunkDocumentInput:
             chunk_size: チャンクサイズ（文字数）
             overlap_size: 重複サイズ（文字数）
             generate_embeddings: チャンク作成時に埋め込みを生成するかどうか
+            store_in_vector_db: ベクトルDBに保存するかどうか
         """
         self.document_id = document_id
         self.chunk_size = chunk_size
         self.overlap_size = overlap_size
         self.generate_embeddings = generate_embeddings
+        self.store_in_vector_db = store_in_vector_db
 
 
 class ChunkDocumentOutput:
@@ -42,7 +45,9 @@ class ChunkDocumentOutput:
         chunk_count: int,
         total_characters: int,
         embeddings_generated: int = 0,
+        embeddings_stored: int = 0,
         status: str = "success",
+        vector_storage_status: str = "not_attempted",
     ) -> None:
         """初期化する。
 
@@ -51,19 +56,24 @@ class ChunkDocumentOutput:
             chunk_count: 生成されたチャンク数
             total_characters: 抽出されたテキストの総文字数
             embeddings_generated: 生成された埋め込み数
+            embeddings_stored: ベクトルDBに保存された埋め込み数
             status: 処理ステータス（success/failed）
+            vector_storage_status: ベクトル保存ステータス（success/partial/failed/not_attempted）
         """
         self.document_id = document_id
         self.chunk_count = chunk_count
         self.total_characters = total_characters
         self.embeddings_generated = embeddings_generated
+        self.embeddings_stored = embeddings_stored
         self.status = status
+        self.vector_storage_status = vector_storage_status
 
 
 class ChunkDocumentUseCase:
     """文書チャンク化ユースケース。
 
     文書からテキストを抽出し、チャンクに分割して保存する。
+    オプションでベクトルDBへの保存も行う。
     """
 
     def __init__(
@@ -73,6 +83,7 @@ class ChunkDocumentUseCase:
         chunking_strategy: ChunkingStrategy,
         chunking_service: ChunkingService,
         embedding_service: EmbeddingService | None = None,
+        vector_search_repository: VectorSearchRepository | None = None,
     ) -> None:
         """初期化する。
 
@@ -82,12 +93,14 @@ class ChunkDocumentUseCase:
             chunking_strategy: チャンク分割戦略
             chunking_service: チャンク化ドメインサービス
             embedding_service: 埋め込みサービス（オプション）
+            vector_search_repository: ベクトル検索リポジトリ（オプション）
         """
         self._document_repository = document_repository
         self._text_extractor = text_extractor
         self._chunking_strategy = chunking_strategy
         self._chunking_service = chunking_service
         self._embedding_service = embedding_service
+        self._vector_search_repository = vector_search_repository
 
     async def execute(self, input_dto: ChunkDocumentInput) -> ChunkDocumentOutput:
         """文書をチャンク化する。
@@ -122,7 +135,10 @@ class ChunkDocumentUseCase:
                     document_id=input_dto.document_id,
                     chunk_count=0,
                     total_characters=0,
+                    embeddings_generated=0,
+                    embeddings_stored=0,
                     status="success",
+                    vector_storage_status="not_attempted",
                 )
 
             # チャンクを生成
@@ -139,6 +155,10 @@ class ChunkDocumentUseCase:
 
             # 埋め込みを生成（有効かつサービスが設定されている場合）
             embeddings_generated = 0
+            embeddings_stored = 0
+            vector_storage_status = "not_attempted"
+            chunk_embeddings = []  # ベクトルDB保存用
+
             if input_dto.generate_embeddings and self._embedding_service and chunks:
                 try:
                     # チャンクのテキストリストを作成
@@ -155,6 +175,8 @@ class ChunkDocumentUseCase:
                     ):
                         chunks[i] = chunk.with_embedding(result.embedding)
                         embeddings_generated += 1
+                        # ベクトルDB保存用のリストに追加
+                        chunk_embeddings.append((chunk.id, result.embedding))
 
                     # 更新されたチャンクで文書を更新
                     self._chunking_service.update_document_chunks(document, chunks)
@@ -166,12 +188,32 @@ class ChunkDocumentUseCase:
             # 文書を保存
             await self._document_repository.save(document)
 
+            # ベクトルDBに保存（有効かつリポジトリが設定されている場合）
+            if (
+                input_dto.store_in_vector_db
+                and self._vector_search_repository
+                and chunk_embeddings
+            ):
+                try:
+                    # バッチで保存
+                    await self._vector_search_repository.save_chunk_embeddings_batch(
+                        chunk_embeddings
+                    )
+                    embeddings_stored = len(chunk_embeddings)
+                    vector_storage_status = "success"
+                except Exception as e:
+                    # ベクトルDB保存のエラーはログに記録するが、チャンク化は成功とする
+                    print(f"Failed to store embeddings in vector DB: {str(e)}")
+                    vector_storage_status = "failed"
+
             return ChunkDocumentOutput(
                 document_id=input_dto.document_id,
                 chunk_count=len(chunks),
                 total_characters=extracted_text.char_count,
                 embeddings_generated=embeddings_generated,
+                embeddings_stored=embeddings_stored,
                 status="success",
+                vector_storage_status=vector_storage_status,
             )
 
         except Exception as e:
@@ -183,5 +225,8 @@ class ChunkDocumentUseCase:
                 document_id=input_dto.document_id,
                 chunk_count=0,
                 total_characters=0,
+                embeddings_generated=0,
+                embeddings_stored=0,
                 status="failed",
+                vector_storage_status="not_attempted",
             )
