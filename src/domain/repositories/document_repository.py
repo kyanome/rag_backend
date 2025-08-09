@@ -102,3 +102,24 @@ class DocumentRepository(ABC):
             マッチする文書のリスト
         """
         pass
+
+    @abstractmethod
+    async def search_by_keyword(
+        self,
+        keyword: str,
+        limit: int = 10,
+        offset: int = 0,
+    ) -> tuple[list[DocumentListItem], int]:
+        """キーワードで文書を全文検索する。
+
+        PostgreSQLの全文検索機能を使用して、文書のタイトルと内容を検索する。
+
+        Args:
+            keyword: 検索キーワード
+            limit: 取得する最大件数
+            offset: スキップする件数
+
+        Returns:
+            検索結果のリストと総件数のタプル
+        """
+        pass
