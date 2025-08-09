@@ -12,12 +12,13 @@ from src.domain.exceptions.auth_exceptions import UserNotFoundException
 from src.domain.services import PasswordHasher
 from src.domain.value_objects import Email, UserId, UserRole
 from src.infrastructure.repositories import UserRepositoryImpl
+from src.infrastructure.services import PasswordHasherImpl
 
 
 @pytest.fixture
 def password_hasher() -> PasswordHasher:
     """Create a password hasher."""
-    return PasswordHasher()
+    return PasswordHasherImpl()
 
 
 @pytest.fixture
@@ -27,6 +28,7 @@ def sample_user(password_hasher: PasswordHasher) -> User:
         id=UserId(value=str(uuid.uuid4())),
         email=Email(value="test@example.com"),
         hashed_password=password_hasher.hash_password("Password123!"),
+        name="Test User",
         role=UserRole.viewer(),
         is_active=True,
         is_email_verified=False,
@@ -118,6 +120,7 @@ class TestUserRepositoryIntegration:
             id=UserId(value=str(uuid.uuid4())),
             email=sample_user.email,  # Same email
             hashed_password=password_hasher.hash_password("DifferentPassword123!"),
+            name="Duplicate User",
             role=UserRole.editor(),
         )
 
@@ -205,6 +208,7 @@ class TestUserRepositoryIntegration:
                 id=UserId(value=str(uuid.uuid4())),
                 email=Email(value=f"user{i}@example.com"),
                 hashed_password=password_hasher.hash_password("Password123!"),
+                name=f"User {i}",
                 role=UserRole.viewer(),
             )
             users.append(user)
@@ -239,6 +243,7 @@ class TestUserRepositoryIntegration:
             id=UserId(value=str(uuid.uuid4())),
             email=Email(value="active@example.com"),
             hashed_password=password_hasher.hash_password("Password123!"),
+            name="Active User",
             role=UserRole.viewer(),
             is_active=True,
         )
@@ -246,6 +251,7 @@ class TestUserRepositoryIntegration:
             id=UserId(value=str(uuid.uuid4())),
             email=Email(value="inactive@example.com"),
             hashed_password=password_hasher.hash_password("Password123!"),
+            name="Inactive User",
             role=UserRole.viewer(),
             is_active=False,
         )
@@ -296,6 +302,7 @@ class TestUserRepositoryIntegration:
                 id=UserId(value=str(uuid.uuid4())),
                 email=Email(value=f"count{i}@example.com"),
                 hashed_password=password_hasher.hash_password("Password123!"),
+                name=f"Count User {i}",
                 role=UserRole.viewer(),
             )
             await user_repository.save(user)
@@ -321,6 +328,7 @@ class TestUserRepositoryIntegration:
                 id=UserId(value=str(uuid.uuid4())),
                 email=Email(value=f"active{i}@example.com"),
                 hashed_password=password_hasher.hash_password("Password123!"),
+                name=f"Active Count User {i}",
                 role=UserRole.viewer(),
                 is_active=True,
             )
@@ -330,6 +338,7 @@ class TestUserRepositoryIntegration:
             id=UserId(value=str(uuid.uuid4())),
             email=Email(value="inactive_count@example.com"),
             hashed_password=password_hasher.hash_password("Password123!"),
+            name="Inactive Count User",
             role=UserRole.viewer(),
             is_active=False,
         )

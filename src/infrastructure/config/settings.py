@@ -48,6 +48,37 @@ class Settings(BaseSettings):
     )
     database_pool_timeout: int = Field(default=30, description="接続タイムアウト（秒）")
 
+    # JWT Configuration
+    jwt_secret_key: str = Field(
+        default="your-secret-key-here-change-in-production",
+        description="JWT署名用の秘密鍵",
+    )
+    jwt_algorithm: str = Field(default="HS256", description="JWT署名アルゴリズム")
+    access_token_expire_minutes: int = Field(
+        default=15, description="アクセストークン有効期限（分）"
+    )
+    refresh_token_expire_days: int = Field(
+        default=30, description="リフレッシュトークン有効期限（日）"
+    )
+
+    # CORS Configuration
+    cors_allowed_origins: list[str] = Field(
+        default=["http://localhost:3000", "http://localhost:3001"],
+        description="許可されたCORSオリジンのリスト",
+    )
+    cors_allow_credentials: bool = Field(
+        default=True,
+        description="CORSでクレデンシャル（Cookie、認証ヘッダー）を許可",
+    )
+    cors_allow_methods: list[str] = Field(
+        default=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        description="許可されたHTTPメソッド",
+    )
+    cors_allow_headers: list[str] = Field(
+        default=["*"],
+        description="許可されたHTTPヘッダー",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -71,6 +102,41 @@ class Settings(BaseSettings):
         if v_upper not in valid_levels:
             raise ValueError(f"Invalid log level: {v}. Must be one of {valid_levels}")
         return v_upper
+
+    @field_validator("jwt_secret_key")
+    @classmethod
+    def validate_jwt_secret_key(cls, v: str) -> str:
+        """JWT秘密鍵のバリデーション。"""
+        if v == "your-secret-key-here-change-in-production":
+            import warnings
+
+            warnings.warn(
+                "Using default JWT secret key. Please set JWT_SECRET_KEY in production!",
+                UserWarning,
+                stacklevel=2,
+            )
+        elif len(v) < 32:
+            raise ValueError("JWT secret key must be at least 32 characters long")
+        return v
+
+    @field_validator("cors_allowed_origins")
+    @classmethod
+    def validate_cors_origins(cls, v: list[str]) -> list[str]:
+        """CORSオリジンのバリデーション。"""
+        if "*" in v and len(v) > 1:
+            raise ValueError(
+                "CORS: Cannot use wildcard '*' with other specific origins"
+            )
+        # Production環境では具体的なオリジンを指定すべき
+        if "*" in v:
+            import warnings
+
+            warnings.warn(
+                "Using wildcard '*' for CORS origins. This is insecure in production!",
+                UserWarning,
+                stacklevel=2,
+            )
+        return v
 
     def ensure_file_storage_path(self) -> None:
         """ファイルストレージディレクトリを作成する。"""

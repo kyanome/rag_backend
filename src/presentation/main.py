@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from ..infrastructure.config.settings import get_settings
 from ..infrastructure.database.connection import init_database
-from .api.v1 import documents
+from .api.v1 import v1_router
 
 
 @asynccontextmanager
@@ -38,17 +38,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configure CORS
+# Configure CORS from settings
+settings = get_settings()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure properly in production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.cors_allowed_origins,
+    allow_credentials=settings.cors_allow_credentials,
+    allow_methods=settings.cors_allow_methods,
+    allow_headers=settings.cors_allow_headers,
 )
 
-# APIルーターを登録
-app.include_router(documents.router, prefix="/api/v1")
+# APIルーターを登録 (v1_routerにはauthとdocumentsの両方が含まれる)
+app.include_router(v1_router, prefix="/api")
 
 
 @app.get("/")

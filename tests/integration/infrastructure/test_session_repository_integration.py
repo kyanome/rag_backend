@@ -11,13 +11,14 @@ from src.domain.exceptions.auth_exceptions import SessionExpiredException
 from src.domain.services import PasswordHasher
 from src.domain.value_objects import Email, UserId, UserRole
 from src.infrastructure.repositories import SessionRepositoryImpl, UserRepositoryImpl
+from src.infrastructure.services import PasswordHasherImpl
 from tests.fixtures.session_fixtures import create_expired_session
 
 
 @pytest.fixture
 def password_hasher() -> PasswordHasher:
     """Create a password hasher."""
-    return PasswordHasher()
+    return PasswordHasherImpl()
 
 
 @pytest.fixture
@@ -27,6 +28,7 @@ async def test_user(db_session: AsyncSession, password_hasher: PasswordHasher) -
         id=UserId(value=str(uuid.uuid4())),
         email=Email(value="session_test@example.com"),
         hashed_password=password_hasher.hash_password("Password123!"),
+        name="Session Test User",
         role=UserRole.viewer(),
         is_active=True,
     )
@@ -335,6 +337,7 @@ class TestSessionRepositoryIntegration:
             id=UserId(value=str(uuid.uuid4())),
             email=Email(value="other@example.com"),
             hashed_password=password_hasher.hash_password("Password123!"),
+            name="Other User",
             role=UserRole.viewer(),
         )
         user_repo = UserRepositoryImpl(session=db_session)

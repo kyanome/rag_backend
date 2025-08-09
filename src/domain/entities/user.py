@@ -1,5 +1,6 @@
 """User entity implementation."""
 
+import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
@@ -13,6 +14,7 @@ class User:
     id: UserId
     email: Email
     hashed_password: HashedPassword
+    name: str
     role: UserRole
     is_active: bool = True
     is_email_verified: bool = False
@@ -31,9 +33,33 @@ class User:
         if not isinstance(self.role, UserRole):
             raise TypeError("role must be a UserRole instance")
 
+    @classmethod
+    def create(
+        cls,
+        email: Email,
+        hashed_password: HashedPassword,
+        name: str,
+        role: UserRole,
+    ) -> "User":
+        """Create a new user with generated ID."""
+        return cls(
+            id=UserId(str(uuid.uuid4())),
+            email=email,
+            hashed_password=hashed_password,
+            name=name,
+            role=role,
+            is_active=True,
+            is_email_verified=False,
+        )
+
     def verify_password(self, plain_password: str) -> bool:
         """Verify a plain password against the user's hashed password."""
         return self.hashed_password.verify(plain_password)
+
+    @property
+    def password(self) -> HashedPassword:
+        """Get the user's hashed password (alias for compatibility)."""
+        return self.hashed_password
 
     def update_password(self, new_hashed_password: HashedPassword) -> None:
         """Update the user's password."""
@@ -50,6 +76,16 @@ class User:
 
         self.email = new_email
         self.is_email_verified = False
+        self.updated_at = datetime.now(UTC)
+
+    def update_name(self, new_name: str) -> None:
+        """Update the user's name."""
+        if not new_name or not new_name.strip():
+            raise ValueError("Name cannot be empty")
+        if len(new_name) > 255:
+            raise ValueError("Name cannot exceed 255 characters")
+
+        self.name = new_name.strip()
         self.updated_at = datetime.now(UTC)
 
     def update_role(self, new_role: UserRole) -> None:
@@ -77,6 +113,10 @@ class User:
 
     def record_login(self) -> None:
         """Record the user's login timestamp."""
+        self.last_login_at = datetime.now(UTC)
+
+    def update_last_login(self) -> None:
+        """Update the user's last login timestamp."""
         self.last_login_at = datetime.now(UTC)
 
     def can_login(self) -> bool:

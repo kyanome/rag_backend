@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import ClassVar
 
 
 class RoleName(str, Enum):
@@ -71,6 +72,11 @@ class UserRole:
     name: RoleName
     permissions: frozenset[Permission]
 
+    # Class-level constants for role access
+    ADMIN: ClassVar["UserRole"]
+    EDITOR: ClassVar["UserRole"]
+    VIEWER: ClassVar["UserRole"]
+
     @classmethod
     def from_name(cls, role_name: str) -> "UserRole":
         """Create a UserRole from a role name string."""
@@ -124,3 +130,9 @@ class UserRole:
     def __str__(self) -> str:
         """Return string representation."""
         return self.name.value
+
+
+# Initialize class-level constants after class definition
+UserRole.ADMIN = UserRole.admin()
+UserRole.EDITOR = UserRole.editor()
+UserRole.VIEWER = UserRole.viewer()

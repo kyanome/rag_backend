@@ -22,6 +22,7 @@ class TestUser:
             id=user_id,
             email=email,
             hashed_password=password,
+            name="Test User",
             role=role,
         )
 
@@ -42,6 +43,7 @@ class TestUser:
             id=UserId.generate(),
             email=Email("user@example.com"),
             hashed_password=HashedPassword.from_plain_password(password),
+            name="Test User",
             role=UserRole.viewer(),
         )
 
@@ -54,6 +56,7 @@ class TestUser:
             id=UserId.generate(),
             email=Email("user@example.com"),
             hashed_password=HashedPassword.from_plain_password("oldpassword"),
+            name="Test User",
             role=UserRole.viewer(),
         )
 
@@ -71,6 +74,7 @@ class TestUser:
             id=UserId.generate(),
             email=Email("old@example.com"),
             hashed_password=HashedPassword.from_plain_password("password123"),
+            name="Test User",
             role=UserRole.viewer(),
             is_email_verified=True,
         )
@@ -90,6 +94,7 @@ class TestUser:
             id=UserId.generate(),
             email=Email("user@example.com"),
             hashed_password=HashedPassword.from_plain_password("password123"),
+            name="Test User",
             role=UserRole.viewer(),
         )
 
@@ -107,6 +112,7 @@ class TestUser:
             id=UserId.generate(),
             email=Email("user@example.com"),
             hashed_password=HashedPassword.from_plain_password("password123"),
+            name="Test User",
             role=UserRole.viewer(),
             is_active=False,
         )
@@ -128,6 +134,7 @@ class TestUser:
             id=UserId.generate(),
             email=Email("user@example.com"),
             hashed_password=HashedPassword.from_plain_password("password123"),
+            name="Test User",
             role=UserRole.viewer(),
         )
 
@@ -142,6 +149,7 @@ class TestUser:
             id=UserId.generate(),
             email=Email("user@example.com"),
             hashed_password=HashedPassword.from_plain_password("password123"),
+            name="Test User",
             role=UserRole.viewer(),
         )
 
@@ -158,6 +166,7 @@ class TestUser:
                 id="not-a-user-id",  # type: ignore
                 email=Email("user@example.com"),
                 hashed_password=HashedPassword.from_plain_password("password123"),
+                name="Test User",
                 role=UserRole.viewer(),
             )
 
@@ -166,6 +175,7 @@ class TestUser:
                 id=UserId.generate(),
                 email="not-an-email",  # type: ignore
                 hashed_password=HashedPassword.from_plain_password("password123"),
+                name="Test User",
                 role=UserRole.viewer(),
             )
 
@@ -174,6 +184,7 @@ class TestUser:
                 id=UserId.generate(),
                 email=Email("user@example.com"),
                 hashed_password="not-a-password",  # type: ignore
+                name="Test User",
                 role=UserRole.viewer(),
             )
 
@@ -182,6 +193,7 @@ class TestUser:
                 id=UserId.generate(),
                 email=Email("user@example.com"),
                 hashed_password=HashedPassword.from_plain_password("password123"),
+                name="Test User",
                 role="not-a-role",  # type: ignore
             )
 
@@ -195,6 +207,7 @@ class TestUser:
             id=user_id,
             email=email,
             hashed_password=HashedPassword.from_plain_password("password123"),
+            name="Test User",
             role=role,
         )
 

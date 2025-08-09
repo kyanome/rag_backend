@@ -2,7 +2,7 @@
 
 from ...domain.entities import Document
 from ...domain.repositories import DocumentRepository
-from ...domain.value_objects import DocumentId, DocumentMetadata
+from ...domain.value_objects import DocumentId, DocumentMetadata, UserId
 from ...infrastructure.externals import FileStorageService
 
 
@@ -20,6 +20,7 @@ class UploadDocumentInput:
         tags: list[str] | None = None,
         author: str | None = None,
         description: str | None = None,
+        owner_id: UserId | None = None,
     ) -> None:
         """初期化する。
 
@@ -33,6 +34,7 @@ class UploadDocumentInput:
             tags: タグリスト
             author: 作成者
             description: 文書の説明
+            owner_id: 文書の所有者ID
         """
         self.file_name = file_name
         self.file_content = file_content
@@ -43,6 +45,7 @@ class UploadDocumentInput:
         self.tags = tags or []
         self.author = author
         self.description = description
+        self.owner_id = owner_id
 
 
 class UploadDocumentOutput:
@@ -151,6 +154,7 @@ class UploadDocumentUseCase:
             content=input_dto.file_content,
             metadata=metadata,
             document_id=document_id,
+            owner_id=input_dto.owner_id,
         )
 
         # 文書を保存

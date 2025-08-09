@@ -82,6 +82,9 @@ class DocumentModel(Base):
     content = Column(Text, nullable=False)  # バイナリデータはBase64エンコードして保存
     document_metadata = Column(JSON, nullable=False)
     version = Column(Integer, default=1, nullable=False)
+    owner_id: Column[uuid.UUID | None] = Column(
+        UUID(), ForeignKey("users.id"), nullable=True
+    )
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     updated_at = Column(
         DateTime,
@@ -94,6 +97,7 @@ class DocumentModel(Base):
     chunks = relationship(
         "DocumentChunkModel", back_populates="document", cascade="all, delete-orphan"
     )
+    owner = relationship("UserModel", back_populates="documents")
 
     def to_domain(self) -> DomainDocument:
         """ドメインエンティティに変換する。
@@ -123,6 +127,7 @@ class DocumentModel(Base):
             metadata=document_metadata,
             chunks=[],
             version=self.version,  # type: ignore[arg-type]
+            owner_id=UserId(str(self.owner_id)) if self.owner_id else None,
         )
 
         # チャンクの追加
@@ -162,6 +167,7 @@ class DocumentModel(Base):
             ),
             document_metadata=metadata_dict,
             version=document.version,
+            owner_id=uuid.UUID(document.owner_id.value) if document.owner_id else None,
             created_at=document.metadata.created_at,
             updated_at=document.metadata.updated_at,
         )
@@ -252,6 +258,7 @@ class UserModel(Base):
     id: Column[uuid.UUID] = Column(UUID(), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
+    name = Column(String(255), nullable=False)
     role = Column(String(50), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     is_email_verified = Column(Boolean, default=False, nullable=False)
@@ -268,6 +275,7 @@ class UserModel(Base):
     sessions = relationship(
         "SessionModel", back_populates="user", cascade="all, delete-orphan"
     )
+    documents = relationship("DocumentModel", back_populates="owner")
 
     def to_domain(self) -> DomainUser:
         """ドメインエンティティに変換する。
@@ -279,6 +287,7 @@ class UserModel(Base):
             id=UserId(value=str(self.id)),
             email=Email(value=self.email),  # type: ignore[arg-type]
             hashed_password=HashedPassword(value=self.hashed_password),  # type: ignore[arg-type]
+            name=self.name,  # type: ignore[arg-type]
             role=UserRole.from_name(self.role),  # type: ignore[arg-type]
             is_active=self.is_active,  # type: ignore[arg-type]
             is_email_verified=self.is_email_verified,  # type: ignore[arg-type]
@@ -301,7 +310,8 @@ class UserModel(Base):
             id=uuid.UUID(user.id.value),
             email=user.email.value,
             hashed_password=user.hashed_password.value,
-            role=str(user.role),  # UserRole.__str__() returns the role name
+            name=user.name,
+            role=user.role.name.value,  # Get the role name value
             is_active=user.is_active,
             is_email_verified=user.is_email_verified,
             created_at=user.created_at,
