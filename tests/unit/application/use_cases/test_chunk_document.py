@@ -125,7 +125,9 @@ class TestChunkDocumentUseCase:
     ) -> None:
         """文書が見つからない場合にエラーが発生することを確認する。"""
         # Arrange
-        input_dto = ChunkDocumentInput(document_id="550e8400-e29b-41d4-a716-446655440001")
+        input_dto = ChunkDocumentInput(
+            document_id="550e8400-e29b-41d4-a716-446655440001"
+        )
         mock_repository.find_by_id = AsyncMock(return_value=None)
 
         # Act & Assert
@@ -142,7 +144,9 @@ class TestChunkDocumentUseCase:
     ) -> None:
         """空のテキストの場合の処理を確認する。"""
         # Arrange
-        input_dto = ChunkDocumentInput(document_id="550e8400-e29b-41d4-a716-446655440000")
+        input_dto = ChunkDocumentInput(
+            document_id="550e8400-e29b-41d4-a716-446655440000"
+        )
 
         mock_repository.find_by_id = AsyncMock(return_value=sample_document)
 
@@ -168,7 +172,9 @@ class TestChunkDocumentUseCase:
     ) -> None:
         """テキスト抽出でエラーが発生した場合の処理を確認する。"""
         # Arrange
-        input_dto = ChunkDocumentInput(document_id="550e8400-e29b-41d4-a716-446655440000")
+        input_dto = ChunkDocumentInput(
+            document_id="550e8400-e29b-41d4-a716-446655440000"
+        )
 
         mock_repository.find_by_id = AsyncMock(return_value=sample_document)
         mock_text_extractor.extract_text = AsyncMock(
