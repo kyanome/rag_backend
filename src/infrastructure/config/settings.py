@@ -90,6 +90,38 @@ class Settings(BaseSettings):
         le=10000,
     )
 
+    # Embedding Configuration
+    embedding_provider: str = Field(
+        default="mock",
+        description="埋め込みプロバイダー（openai/ollama/mock）",
+    )
+    openai_api_key: str | None = Field(
+        default=None,
+        description="OpenAI APIキー",
+    )
+    openai_embedding_model: str = Field(
+        default="text-embedding-ada-002",
+        description="OpenAI埋め込みモデル",
+    )
+    ollama_base_url: str = Field(
+        default="http://localhost:11434",
+        description="Ollama APIベースURL",
+    )
+    ollama_embedding_model: str = Field(
+        default="mxbai-embed-large",
+        description="Ollama埋め込みモデル",
+    )
+    auto_generate_embeddings: bool = Field(
+        default=True,
+        description="チャンク作成時に自動的に埋め込みを生成",
+    )
+    embedding_batch_size: int = Field(
+        default=100,
+        description="埋め込みバッチ処理サイズ",
+        ge=1,
+        le=1000,
+    )
+
     # CORS Configuration
     cors_allowed_origins: list[str] = Field(
         default=["http://localhost:3000", "http://localhost:3001"],
@@ -165,6 +197,32 @@ class Settings(BaseSettings):
         """チャンクオーバーラップのバリデーション。"""
         # chunk_sizeと比較する必要があるが、Pydantic v2では別のアプローチが必要
         # ここでは単純な範囲チェックのみ
+        return v
+
+    @field_validator("embedding_provider")
+    @classmethod
+    def validate_embedding_provider(cls, v: str) -> str:
+        """埋め込みプロバイダーのバリデーション。"""
+        valid_providers = ["openai", "ollama", "mock"]
+        if v not in valid_providers:
+            raise ValueError(
+                f"Invalid embedding provider: {v}. Must be one of {valid_providers}"
+            )
+        return v
+
+    @field_validator("openai_api_key")
+    @classmethod
+    def validate_openai_api_key(cls, v: str | None, info: Any) -> str | None:
+        """OpenAI APIキーのバリデーション。"""
+        if info.data.get("embedding_provider") == "openai" and not v:
+            import warnings
+
+            warnings.warn(
+                "OpenAI provider selected but no API key provided. "
+                "Please set OPENAI_API_KEY environment variable.",
+                UserWarning,
+                stacklevel=2,
+            )
         return v
 
     @field_validator("cors_allowed_origins")
