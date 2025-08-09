@@ -9,6 +9,8 @@ from .document_metadata import DocumentMetadata
 from .email import Email
 from .hashed_password import HashedPassword
 from .page_info import PageInfo
+from .search_query import SearchQuery, SearchType
+from .search_result import ConfidenceLevel, SearchResult, SearchResultItem
 from .user_id import UserId
 from .user_role import Permission, RoleName, UserRole
 from .vector_search_result import VectorSearchResult
@@ -28,4 +30,9 @@ __all__ = [
     "UserId",
     "UserRole",
     "VectorSearchResult",
+    "SearchQuery",
+    "SearchType",
+    "SearchResult",
+    "SearchResultItem",
+    "ConfidenceLevel",
 ]
