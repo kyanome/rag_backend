@@ -99,11 +99,32 @@ async def get_chunk_document_use_case(
     # チャンク化サービスを作成
     chunking_service = ChunkingService()
 
+    # 埋め込みサービスを取得（設定で有効な場合）
+    from ..infrastructure.externals.embeddings import EmbeddingServiceFactory
+
+    embedding_service = None
+    if settings.auto_generate_embeddings:
+        provider = settings.embedding_provider
+        if provider not in ["openai", "ollama", "mock"]:
+            provider = "mock"
+
+        embedding_service = EmbeddingServiceFactory.create(
+            provider=provider,  # type: ignore[arg-type]
+            api_key=settings.openai_api_key,
+            model=(
+                settings.openai_embedding_model
+                if provider == "openai"
+                else settings.ollama_embedding_model if provider == "ollama" else None
+            ),
+            base_url=settings.ollama_base_url if provider == "ollama" else None,
+        )
+
     return ChunkDocumentUseCase(
         document_repository=document_repository,
         text_extractor=text_extractor,
         chunking_strategy=chunking_strategy,
         chunking_service=chunking_service,
+        embedding_service=embedding_service,
     )
 
 
