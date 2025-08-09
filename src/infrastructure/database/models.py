@@ -11,6 +11,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -18,6 +19,15 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import CHAR, TypeDecorator
+
+# Import pgvector only if PostgreSQL is being used
+try:
+    from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
+
+    PGVECTOR_AVAILABLE = True
+except ImportError:
+    PGVECTOR_AVAILABLE = False
+    Vector = None
 
 from src.domain.entities import Document as DomainDocument
 from src.domain.entities import Session as DomainSession
@@ -189,12 +199,36 @@ class DocumentChunkModel(Base):
         UUID(), ForeignKey("documents.id"), nullable=False
     )
     content = Column(Text, nullable=False)
-    embedding = Column(JSON, nullable=True)  # ベクトルはJSONとして保存
+
+    # PostgreSQL with pgvector: Use Vector type
+    # Other databases: Use JSON type for backward compatibility
+    if PGVECTOR_AVAILABLE and Vector is not None:
+        embedding_vector = Column(Vector(1536), nullable=True)  # For pgvector
+        embedding = Column(JSON, nullable=True)  # Keep for backward compatibility
+    else:
+        embedding_vector = None
+        embedding = Column(JSON, nullable=True)  # Fallback to JSON
+
     chunk_metadata = Column(JSON, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
     # リレーション
     document = relationship("DocumentModel", back_populates="chunks")
+
+    # Indexes for vector search (only created when using PostgreSQL)
+    __table_args__ = (
+        (
+            Index(
+                "ix_document_chunks_embedding_vector",
+                "embedding_vector",
+                postgresql_using="ivfflat",
+                postgresql_ops={"embedding_vector": "vector_cosine_ops"},
+                postgresql_with={"lists": 100},
+            )
+            if PGVECTOR_AVAILABLE
+            else ()
+        ),
+    )
 
     def to_domain(self) -> DomainDocumentChunk:
         """ドメイン値オブジェクトに変換する。
@@ -213,11 +247,22 @@ class DocumentChunkModel(Base):
             overlap_with_next=metadata_dict.get("overlap_with_next", 0),
         )
 
+        # Use embedding_vector if available (pgvector), otherwise fall back to embedding (JSON)
+        embedding_data = None
+        if (
+            PGVECTOR_AVAILABLE
+            and hasattr(self, "embedding_vector")
+            and self.embedding_vector is not None
+        ):
+            embedding_data = list(self.embedding_vector)  # Convert to list
+        elif self.embedding:
+            embedding_data = self.embedding  # type: ignore[assignment]
+
         return DomainDocumentChunk(
             id=self.id,  # type: ignore[arg-type]
             document_id=DocumentId(value=str(self.document_id)),
             content=self.content,  # type: ignore[arg-type]
-            embedding=self.embedding if self.embedding else None,  # type: ignore[arg-type]
+            embedding=embedding_data,
             metadata=chunk_metadata,
         )
 
@@ -241,13 +286,20 @@ class DocumentChunkModel(Base):
             "overlap_with_next": chunk.metadata.overlap_with_next,
         }
 
-        return cls(
+        model = cls(
             id=chunk.id,
             document_id=uuid.UUID(chunk.document_id.value),
             content=chunk.content,
-            embedding=chunk.embedding,
             chunk_metadata=metadata_dict,
         )
+
+        # Store embedding in both fields for compatibility
+        if chunk.embedding:
+            if PGVECTOR_AVAILABLE:
+                model.embedding_vector = chunk.embedding  # type: ignore[assignment]
+            model.embedding = chunk.embedding  # type: ignore[assignment]
+
+        return model
 
 
 class UserModel(Base):

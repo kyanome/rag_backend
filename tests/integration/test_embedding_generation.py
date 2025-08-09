@@ -31,7 +31,7 @@ class TestEmbeddingGeneration:
         # セットアップ
         file_storage = FileStorageService(base_path=tmp_path)
         repository = DocumentRepositoryImpl(db_session, file_storage)
-        embedding_service = MockEmbeddingService(model="test-model", dimensions=384)
+        embedding_service = MockEmbeddingService(model="test-model", dimensions=1536)
         use_case = GenerateEmbeddingsUseCase(
             document_repository=repository,
             embedding_service=embedding_service,
@@ -90,7 +90,7 @@ class TestEmbeddingGeneration:
         assert output.embeddings_generated == 3
         assert output.embeddings_skipped == 0
         assert output.embedding_model == "test-model"
-        assert output.embedding_dimensions == 384
+        assert output.embedding_dimensions == 1536
         assert output.status == "success"
 
         # 文書を再取得して埋め込みが保存されていることを確認
@@ -103,7 +103,7 @@ class TestEmbeddingGeneration:
         assert len(chunks_with_embedding) == 3
         for chunk in chunks_with_embedding:
             assert chunk.embedding is not None
-            assert len(chunk.embedding) == 384
+            assert len(chunk.embedding) == 1536
 
     @pytest.mark.asyncio
     async def test_embedding_service_factory(self) -> None:
@@ -124,7 +124,7 @@ class TestEmbeddingGeneration:
     @pytest.mark.asyncio
     async def test_batch_embedding_generation(self) -> None:
         """バッチ埋め込み生成が正しく動作することを確認する。"""
-        embedding_service = MockEmbeddingService(model="test-model", dimensions=384)
+        embedding_service = MockEmbeddingService(model="test-model", dimensions=1536)
 
         texts = [
             "First document chunk",
@@ -139,8 +139,8 @@ class TestEmbeddingGeneration:
         assert len(results) == 3
         for _i, result in enumerate(results):
             assert result.model == "test-model"
-            assert result.dimensions == 384
-            assert len(result.embedding) == 384
+            assert result.dimensions == 1536
+            assert len(result.embedding) == 1536
             assert result.is_valid
 
         # 各テキストで異なる埋め込みが生成されることを確認
