@@ -1,15 +1,19 @@
 """ChunkDocumentUseCaseのテスト。"""
 
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from src.application.use_cases import ChunkDocumentInput, ChunkDocumentOutput, ChunkDocumentUseCase
+from src.application.use_cases import (
+    ChunkDocumentInput,
+    ChunkDocumentOutput,
+    ChunkDocumentUseCase,
+)
 from src.domain.entities import Document
 from src.domain.externals import ChunkingStrategy, ExtractedText, TextExtractor
 from src.domain.repositories import DocumentRepository
 from src.domain.services import ChunkingService
-from src.domain.value_objects import DocumentChunk, DocumentId, DocumentMetadata
+from src.domain.value_objects import DocumentMetadata
 
 
 class TestChunkDocumentUseCase:
@@ -77,36 +81,35 @@ class TestChunkDocumentUseCase:
         """正常にチャンク化が実行されることを確認する。"""
         # Arrange
         input_dto = ChunkDocumentInput(
-            document_id="test-doc-id",
+            document_id="550e8400-e29b-41d4-a716-446655440000",
             chunk_size=100,
             overlap_size=20,
         )
-        
+
         mock_repository.find_by_id = AsyncMock(return_value=sample_document)
         mock_repository.save = AsyncMock()
-        
+
         extracted_text = ExtractedText(
-            content="This is a test document content.",
-            metadata={"page_count": 1}
+            content="This is a test document content.", metadata={"page_count": 1}
         )
         mock_text_extractor.extract_text = AsyncMock(return_value=extracted_text)
-        
+
         # チャンク分割戦略のモック
         mock_chunking_strategy.split_text.return_value = [
             ("This is a test", 0, 14),
             ("test document content.", 10, 32),
         ]
-        
+
         # Act
         result = await use_case.execute(input_dto)
-        
+
         # Assert
         assert isinstance(result, ChunkDocumentOutput)
-        assert result.document_id == "test-doc-id"
+        assert result.document_id == "550e8400-e29b-41d4-a716-446655440000"
         assert result.chunk_count == 2
         assert result.total_characters == len(extracted_text.content)
         assert result.status == "success"
-        
+
         mock_repository.find_by_id.assert_called_once()
         mock_text_extractor.extract_text.assert_called_once_with(
             content=sample_document.content,
@@ -122,9 +125,9 @@ class TestChunkDocumentUseCase:
     ) -> None:
         """文書が見つからない場合にエラーが発生することを確認する。"""
         # Arrange
-        input_dto = ChunkDocumentInput(document_id="non-existent-id")
+        input_dto = ChunkDocumentInput(document_id="550e8400-e29b-41d4-a716-446655440001")
         mock_repository.find_by_id = AsyncMock(return_value=None)
-        
+
         # Act & Assert
         with pytest.raises(ValueError, match="Document not found"):
             await use_case.execute(input_dto)
@@ -139,17 +142,17 @@ class TestChunkDocumentUseCase:
     ) -> None:
         """空のテキストの場合の処理を確認する。"""
         # Arrange
-        input_dto = ChunkDocumentInput(document_id="test-doc-id")
-        
+        input_dto = ChunkDocumentInput(document_id="550e8400-e29b-41d4-a716-446655440000")
+
         mock_repository.find_by_id = AsyncMock(return_value=sample_document)
-        
+
         # 空のテキストを返す
         empty_text = ExtractedText(content="", metadata={})
         mock_text_extractor.extract_text = AsyncMock(return_value=empty_text)
-        
+
         # Act
         result = await use_case.execute(input_dto)
-        
+
         # Assert
         assert result.chunk_count == 0
         assert result.total_characters == 0
@@ -165,16 +168,16 @@ class TestChunkDocumentUseCase:
     ) -> None:
         """テキスト抽出でエラーが発生した場合の処理を確認する。"""
         # Arrange
-        input_dto = ChunkDocumentInput(document_id="test-doc-id")
-        
+        input_dto = ChunkDocumentInput(document_id="550e8400-e29b-41d4-a716-446655440000")
+
         mock_repository.find_by_id = AsyncMock(return_value=sample_document)
         mock_text_extractor.extract_text = AsyncMock(
             side_effect=Exception("Extraction failed")
         )
-        
+
         # Act
         result = await use_case.execute(input_dto)
-        
+
         # Assert
         assert result.chunk_count == 0
         assert result.total_characters == 0
@@ -192,35 +195,33 @@ class TestChunkDocumentUseCase:
         """カスタムパラメータでチャンク化が実行されることを確認する。"""
         # Arrange
         input_dto = ChunkDocumentInput(
-            document_id="test-doc-id",
+            document_id="550e8400-e29b-41d4-a716-446655440000",
             chunk_size=500,
             overlap_size=50,
         )
-        
+
         mock_repository.find_by_id = AsyncMock(return_value=sample_document)
         mock_repository.save = AsyncMock()
-        
+
         extracted_text = ExtractedText(
-            content="Long document content " * 100,
-            metadata={}
+            content="Long document content " * 100, metadata={}
         )
         mock_text_extractor.extract_text = AsyncMock(return_value=extracted_text)
-        
+
         # より多くのチャンクを返す
         mock_chunking_strategy.split_text.return_value = [
-            (f"Chunk {i}", i * 450, (i + 1) * 450)
-            for i in range(5)
+            (f"Chunk {i}", i * 450, (i + 1) * 450) for i in range(5)
         ]
-        
+
         # Act
         result = await use_case.execute(input_dto)
-        
+
         # Assert
         assert result.chunk_count == 5
         assert result.status == "success"
-        
+
         # カスタムパラメータが渡されていることを確認
         mock_chunking_strategy.split_text.assert_called_once()
         call_args = mock_chunking_strategy.split_text.call_args
         assert call_args[0][1] == 500  # chunk_size
-        assert call_args[0][2] == 50   # overlap_size
+        assert call_args[0][2] == 50  # overlap_size

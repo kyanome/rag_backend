@@ -42,9 +42,7 @@ class TextExtractor(ABC):
     """
 
     @abstractmethod
-    async def extract_text(
-        self, content: bytes, content_type: str
-    ) -> ExtractedText:
+    async def extract_text(self, content: bytes, content_type: str) -> ExtractedText:
         """文書からテキストを抽出する。
 
         Args:

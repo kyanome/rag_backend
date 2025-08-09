@@ -21,9 +21,7 @@ class DocxTextExtractor(TextExtractor):
         "application/msword",
     }
 
-    async def extract_text(
-        self, content: bytes, content_type: str
-    ) -> ExtractedText:
+    async def extract_text(self, content: bytes, content_type: str) -> ExtractedText:
         """Word文書からテキストを抽出する。
 
         Args:
@@ -72,7 +70,7 @@ class DocxTextExtractor(TextExtractor):
             extracted_text = "".join(text_parts)
 
             # メタデータを収集
-            metadata = {
+            metadata: dict[str, str | int | float] = {
                 "paragraph_count": paragraph_count,
                 "table_count": table_count,
                 "char_count": len(extracted_text),
@@ -93,7 +91,9 @@ class DocxTextExtractor(TextExtractor):
             return ExtractedText(content=extracted_text, metadata=metadata)
 
         except Exception as e:
-            raise Exception(f"Failed to extract text from Word document: {str(e)}") from e
+            raise Exception(
+                f"Failed to extract text from Word document: {str(e)}"
+            ) from e
 
     def supports(self, content_type: str) -> bool:
         """指定されたコンテンツタイプをサポートしているか判定する。

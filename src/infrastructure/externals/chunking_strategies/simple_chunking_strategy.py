@@ -31,7 +31,7 @@ class SimpleChunkingStrategy(ChunkingStrategy):
 
         chunks = []
         text_length = len(text)
-        
+
         # 重複を考慮した実効的なステップサイズ
         step_size = chunk_size - overlap_size
         if step_size <= 0:
@@ -41,17 +41,17 @@ class SimpleChunkingStrategy(ChunkingStrategy):
         while i < text_length:
             # チャンクの終了位置を計算
             end_pos = min(i + chunk_size, text_length)
-            
+
             # チャンクテキストを抽出
             chunk_text = text[i:end_pos]
-            
+
             # 空白のみのチャンクは無視
             if chunk_text.strip():
                 chunks.append((chunk_text, i, end_pos))
-            
+
             # 次の開始位置を計算
             i += step_size
-            
+
             # 最後のチャンクに到達したら終了
             if i >= text_length:
                 break

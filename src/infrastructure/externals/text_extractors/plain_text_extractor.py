@@ -23,9 +23,7 @@ class PlainTextExtractor(TextExtractor):
         "application/x-markdown",
     }
 
-    async def extract_text(
-        self, content: bytes, content_type: str
-    ) -> ExtractedText:
+    async def extract_text(self, content: bytes, content_type: str) -> ExtractedText:
         """プレーンテキストからテキストを抽出する。
 
         Args:
@@ -44,8 +42,8 @@ class PlainTextExtractor(TextExtractor):
 
         # 文字エンコーディングを検出
         detected = chardet.detect(content)
-        encoding = detected.get("encoding", "utf-8")
-        confidence = detected.get("confidence", 0)
+        encoding = detected.get("encoding", "utf-8") or "utf-8"
+        confidence = detected.get("confidence", 0.0)
 
         # 信頼度が低い場合はUTF-8を試す
         if confidence < 0.7:
@@ -65,13 +63,13 @@ class PlainTextExtractor(TextExtractor):
                     0,
                     len(content),
                     f"Failed to decode text with encoding: {encoding}",
-                )
+                ) from None
 
         # BOMを削除
         if text.startswith("\ufeff"):
             text = text[1:]
 
-        metadata = {
+        metadata: dict[str, str | int | float] = {
             "encoding": encoding,
             "confidence": confidence,
             "line_count": text.count("\n") + 1,

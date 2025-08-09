@@ -72,6 +72,4 @@ class TextExtractorFactory:
         Returns:
             サポートしている場合True
         """
-        return any(
-            extractor.supports(content_type) for extractor in self._extractors
-        )
+        return any(extractor.supports(content_type) for extractor in self._extractors)

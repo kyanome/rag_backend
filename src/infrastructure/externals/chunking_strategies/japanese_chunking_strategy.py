@@ -3,9 +3,7 @@
 日本語テキストの文境界を考慮したチャンク分割を行う。
 """
 
-import re
-
-from janome.tokenizer import Tokenizer
+from janome.tokenizer import Tokenizer  # type: ignore
 
 from ....domain.externals import ChunkingStrategy
 
@@ -47,7 +45,7 @@ class JapaneseChunkingStrategy(ChunkingStrategy):
             return []
 
         chunks = []
-        current_chunk = []
+        current_chunk: list[str] = []
         current_chunk_size = 0
         current_start = 0
 
@@ -85,14 +83,13 @@ class JapaneseChunkingStrategy(ChunkingStrategy):
                     # オーバーラップ処理
                     if overlap_size > 0 and chunks:
                         # 前のチャンクの末尾から重複部分を取得
-                        overlap_sentences = []
+                        overlap_sentences: list[str] = []
                         overlap_size_count = 0
                         for s, _, _ in reversed(
                             sentences[
                                 max(
                                     0,
-                                    sentences.index(sentence_data)
-                                    - len(current_chunk),
+                                    sentences.index(sentence_data) - len(current_chunk),
                                 ) : sentences.index(sentence_data)
                             ]
                         ):

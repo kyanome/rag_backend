@@ -19,9 +19,7 @@ class PyPDFTextExtractor(TextExtractor):
 
     SUPPORTED_TYPES = {"application/pdf", "application/x-pdf"}
 
-    async def extract_text(
-        self, content: bytes, content_type: str
-    ) -> ExtractedText:
+    async def extract_text(self, content: bytes, content_type: str) -> ExtractedText:
         """PDFからテキストを抽出する。
 
         Args:
@@ -44,7 +42,7 @@ class PyPDFTextExtractor(TextExtractor):
             reader = PdfReader(pdf_file)
 
             # 全ページからテキストを抽出
-            text_parts = []
+            text_parts: list[str] = []
             page_count = len(reader.pages)
 
             for page_num, page in enumerate(reader.pages, start=1):

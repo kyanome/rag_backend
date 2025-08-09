@@ -3,7 +3,6 @@
 文書からテキストを抽出し、チャンクに分割するユースケース。
 """
 
-from ...domain.entities import Document
 from ...domain.externals import ChunkingStrategy, TextExtractor
 from ...domain.repositories import DocumentRepository
 from ...domain.services import ChunkingService
@@ -95,9 +94,9 @@ class ChunkDocumentUseCase:
             Exception: 処理中にエラーが発生した場合
         """
         # 文書を取得
-        document_id = DocumentId(input_dto.document_id)
+        document_id = DocumentId(value=input_dto.document_id)
         document = await self._document_repository.find_by_id(document_id)
-        
+
         if not document:
             raise ValueError(f"Document not found: {input_dto.document_id}")
 
@@ -142,7 +141,7 @@ class ChunkDocumentUseCase:
         except Exception as e:
             # エラーログを出力（本番環境ではロギングサービスを使用）
             print(f"Failed to chunk document {input_dto.document_id}: {str(e)}")
-            
+
             # エラーでも結果を返す
             return ChunkDocumentOutput(
                 document_id=input_dto.document_id,
