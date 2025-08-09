@@ -23,7 +23,15 @@ def event_loop() -> Generator:
 @pytest.fixture
 async def async_session() -> AsyncGenerator[AsyncSession, None]:
     """Create async database session for testing."""
+    # Import all models to ensure they are registered
+    from src.infrastructure.database.models import Base
+
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+
+    # Create all tables
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     async_session_maker = sessionmaker(
         engine, class_=AsyncSession, expire_on_commit=False
     )
@@ -31,6 +39,10 @@ async def async_session() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
         yield session
         await session.rollback()
+
+    # Drop all tables
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
 
     await engine.dispose()
 
