@@ -12,6 +12,11 @@ from .get_document_list import (
     GetDocumentListOutput,
     GetDocumentListUseCase,
 )
+from .search_documents import (
+    SearchDocumentsInput,
+    SearchDocumentsOutput,
+    SearchDocumentsUseCase,
+)
 from .update_document import (
     UpdateDocumentInput,
     UpdateDocumentOutput,
@@ -41,4 +46,7 @@ __all__ = [
     "UpdateDocumentUseCase",
     "DeleteDocumentInput",
     "DeleteDocumentUseCase",
+    "SearchDocumentsInput",
+    "SearchDocumentsOutput",
+    "SearchDocumentsUseCase",
 ]
