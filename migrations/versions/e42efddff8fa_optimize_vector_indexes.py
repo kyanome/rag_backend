@@ -94,7 +94,11 @@ def upgrade() -> None:
         """
         )
 
-        # Index for document title search
+        # Index for document title search (requires pg_trgm extension)
+        # First, create the extension if it doesn't exist
+        op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
+        
+        # Then create the trigram index
         op.execute(
             """
             CREATE INDEX IF NOT EXISTS idx_documents_title_trgm
