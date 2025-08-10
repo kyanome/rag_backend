@@ -8,7 +8,16 @@ from .document_list_item import DocumentListItem
 from .document_metadata import DocumentMetadata
 from .email import Email
 from .hashed_password import HashedPassword
+from .llm_types import (
+    LLMMessage,
+    LLMRequest,
+    LLMResponse,
+    LLMRole,
+    LLMStreamChunk,
+    LLMUsage,
+)
 from .page_info import PageInfo
+from .prompt_template import PromptTemplate, PromptTemplateLibrary, PromptVariable
 from .search_query import SearchQuery, SearchType
 from .search_result import ConfidenceLevel, SearchResult, SearchResultItem
 from .user_id import UserId
@@ -30,6 +39,18 @@ __all__ = [
     "UserId",
     "UserRole",
     "VectorSearchResult",
+    # LLM
+    "LLMRole",
+    "LLMMessage",
+    "LLMUsage",
+    "LLMRequest",
+    "LLMResponse",
+    "LLMStreamChunk",
+    # Prompt
+    "PromptVariable",
+    "PromptTemplate",
+    "PromptTemplateLibrary",
+    # Search
     "SearchQuery",
     "SearchType",
     "SearchResult",

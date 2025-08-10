@@ -122,6 +122,41 @@ class Settings(BaseSettings):
         le=1000,
     )
 
+    # LLM Configuration
+    llm_provider: str = Field(
+        default="mock",
+        description="LLMプロバイダー（openai/ollama/mock）",
+    )
+    openai_llm_model: str = Field(
+        default="gpt-3.5-turbo",
+        description="OpenAI LLMモデル",
+    )
+    ollama_llm_model: str = Field(
+        default="llama2",
+        description="Ollama LLMモデル",
+    )
+    llm_temperature: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=2.0,
+        description="LLM生成温度",
+    )
+    llm_max_tokens: int = Field(
+        default=2000,
+        gt=0,
+        le=10000,
+        description="最大生成トークン数",
+    )
+    llm_stream_enabled: bool = Field(
+        default=True,
+        description="ストリーミング応答を有効化",
+    )
+    llm_timeout: float = Field(
+        default=60.0,
+        gt=0,
+        description="LLM APIタイムアウト（秒）",
+    )
+
     # Vector Storage Configuration
     enable_vector_storage: bool = Field(
         default=True,
@@ -246,6 +281,17 @@ class Settings(BaseSettings):
                 "Please set OPENAI_API_KEY environment variable.",
                 UserWarning,
                 stacklevel=2,
+            )
+        return v
+
+    @field_validator("llm_provider")
+    @classmethod
+    def validate_llm_provider(cls, v: str) -> str:
+        """LLMプロバイダーのバリデーション。"""
+        valid_providers = ["openai", "ollama", "mock"]
+        if v not in valid_providers:
+            raise ValueError(
+                f"Invalid LLM provider: {v}. Must be one of {valid_providers}"
             )
         return v
 

@@ -12,6 +12,7 @@ from ..application.use_cases.get_document_list import GetDocumentListUseCase
 from ..application.use_cases.search_documents import SearchDocumentsUseCase
 from ..application.use_cases.update_document import UpdateDocumentUseCase
 from ..application.use_cases.upload_document import UploadDocumentUseCase
+from ..domain.externals import LLMService
 from ..domain.repositories import VectorSearchRepository
 from ..domain.services import ChunkingService
 from ..infrastructure.config.settings import get_settings
@@ -21,6 +22,7 @@ from ..infrastructure.externals.chunking_strategies import (
     JapaneseChunkingStrategy,
     SimpleChunkingStrategy,
 )
+from ..infrastructure.externals.llms import LLMServiceFactory
 from ..infrastructure.externals.text_extractors import CompositeTextExtractor
 from ..infrastructure.repositories import (
     DocumentRepositoryImpl,
@@ -300,3 +302,13 @@ async def get_session_repository(
         SessionRepositoryImpl: セッションリポジトリ
     """
     return SessionRepositoryImpl(session=session)
+
+
+def get_llm_service() -> LLMService:
+    """LLMサービスを取得する。
+
+    Returns:
+        LLMService: LLMサービス
+    """
+    settings = get_settings()
+    return LLMServiceFactory.from_settings(settings)
