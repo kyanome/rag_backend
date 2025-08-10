@@ -24,6 +24,13 @@ def upgrade() -> None:
 
     # Check if we're using PostgreSQL
     if connection.dialect.name == "postgresql":
+        # First, ensure columns are JSONB type (required for GIN indexes)
+        op.execute(
+            "ALTER TABLE document_chunks ALTER COLUMN chunk_metadata TYPE jsonb USING chunk_metadata::jsonb"
+        )
+        op.execute(
+            "ALTER TABLE documents ALTER COLUMN document_metadata TYPE jsonb USING document_metadata::jsonb"
+        )
         # IVFFlat index for vector similarity search
         # Lists parameter affects index build time vs query performance
         op.execute(
@@ -58,7 +65,7 @@ def upgrade() -> None:
             """
             CREATE INDEX IF NOT EXISTS idx_document_chunks_metadata_gin
             ON document_chunks
-            USING gin(chunk_metadata::jsonb);
+            USING gin(chunk_metadata);
         """
         )
 
@@ -83,7 +90,7 @@ def upgrade() -> None:
             """
             CREATE INDEX IF NOT EXISTS idx_documents_metadata_gin
             ON documents
-            USING gin(document_metadata::jsonb);
+            USING gin(document_metadata);
         """
         )
 
