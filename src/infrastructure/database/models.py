@@ -95,7 +95,9 @@ class DocumentModel(Base):
     owner_id: Column[uuid.UUID | None] = Column(
         UUID(), ForeignKey("users.id"), nullable=True
     )
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    created_at = Column(
+        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), nullable=False
+    )
     updated_at = Column(
         DateTime,
         default=lambda: datetime.now(UTC),
@@ -210,7 +212,9 @@ class DocumentChunkModel(Base):
         embedding = Column(JSON, nullable=True)  # Fallback to JSON
 
     chunk_metadata = Column(JSON, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    created_at = Column(
+        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), nullable=False
+    )
 
     # リレーション
     document = relationship("DocumentModel", back_populates="chunks")
@@ -314,7 +318,9 @@ class UserModel(Base):
     role = Column(String(50), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     is_email_verified = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    created_at = Column(
+        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), nullable=False
+    )
     updated_at = Column(
         DateTime,
         default=lambda: datetime.now(UTC),
@@ -385,7 +391,9 @@ class SessionModel(Base):
     refresh_token = Column(String(500), unique=True, nullable=False, index=True)
     access_token_expires_at = Column(DateTime, nullable=False)
     refresh_token_expires_at = Column(DateTime, nullable=False, index=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    created_at = Column(
+        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), nullable=False
+    )
     last_accessed_at = Column(
         DateTime, default=lambda: datetime.now(UTC), nullable=False
     )
