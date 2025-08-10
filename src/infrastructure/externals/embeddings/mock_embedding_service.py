@@ -25,26 +25,74 @@ class MockEmbeddingService(EmbeddingService):
     def _generate_deterministic_embedding(self, text: str) -> list[float]:
         """テキストから決定論的な埋め込みベクトルを生成する。
 
+        意味的に関連するテキストに対して高い類似度を持つベクトルを生成する。
+
         Args:
             text: テキスト
 
         Returns:
             埋め込みベクトル
         """
-        # テキストのハッシュ値を基に決定論的なベクトルを生成
+        import math
+        
+        # テキストから特徴を抽出
+        text_lower = text.lower()
+        
+        # 共通の特徴キーワード（RAGシステム関連）
+        feature_keywords = {
+            "rag": 1.0,
+            "ベクトル": 0.9,
+            "vector": 0.9,
+            "検索": 0.8,
+            "search": 0.8,
+            "データベース": 0.7,
+            "database": 0.7,
+            "システム": 0.6,
+            "system": 0.6,
+            "言語モデル": 0.8,
+            "llm": 0.8,
+            "embedding": 0.9,
+            "埋め込み": 0.9,
+            "実装": 0.5,
+            "機能": 0.5,
+            "api": 0.6,
+        }
+        
+        # ベースベクトルを作成（テキストのハッシュから）
         hash_obj = hashlib.sha256(text.encode())
         hash_bytes = hash_obj.digest()
-
-        # ハッシュ値を使って次元数分の浮動小数点数を生成
+        
         embedding = []
         for i in range(self._dimensions):
-            # バイト値を-1から1の範囲に正規化
             byte_idx = i % len(hash_bytes)
-            value = (hash_bytes[byte_idx] / 255.0) * 2 - 1
-            # 少し変動を加える
-            value += (i / self._dimensions) * 0.1
+            # ベース値（小さくしておく）
+            base_value = (hash_bytes[byte_idx] / 255.0) * 0.2 - 0.1
+            
+            # 特徴キーワードに基づいてベクトルを調整
+            feature_contribution = 0.0
+            for keyword, weight in feature_keywords.items():
+                if keyword in text_lower:
+                    # キーワードごとに異なる次元パターンを生成
+                    keyword_hash = hashlib.md5(keyword.encode()).digest()
+                    keyword_pattern = keyword_hash[i % len(keyword_hash)] / 255.0
+                    feature_contribution += weight * keyword_pattern * 0.5
+            
+            # 全体的な正規化のために sin/cos パターンを追加
+            angle = (i / self._dimensions) * 2 * math.pi
+            pattern_value = math.sin(angle) * 0.1 + math.cos(angle * 2) * 0.05
+            
+            # 最終的な値を計算
+            value = base_value + feature_contribution + pattern_value
+            
+            # -1から1の範囲にクリップ
+            value = max(-1.0, min(1.0, value))
             embedding.append(float(value))
-
+        
+        # ベクトルを正規化（単位ベクトルにする）
+        norm = math.sqrt(sum(v * v for v in embedding))
+        if norm > 0:
+            embedding = [v / norm for v in embedding]
+        
         return embedding
 
     async def generate_embedding(self, text: str) -> EmbeddingResult:
