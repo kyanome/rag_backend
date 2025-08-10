@@ -1,6 +1,7 @@
 """pytest共通設定。"""
 
 import os
+
 import pytest
 
 # テスト実行時にSQLiteを使用するように環境変数を設定

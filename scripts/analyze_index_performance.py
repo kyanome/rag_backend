@@ -8,7 +8,6 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
-import asyncpg
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,7 +17,7 @@ from src.infrastructure.database.connection import db_manager
 
 class IndexPerformanceAnalyzer:
     """インデックスパフォーマンス分析クラス。"""
-    
+
     def __init__(self, session: AsyncSession) -> None:
         """初期化。
         
@@ -26,7 +25,7 @@ class IndexPerformanceAnalyzer:
             session: データベースセッション
         """
         self.session = session
-    
+
     async def analyze_index_usage(self) -> dict[str, Any]:
         """インデックス使用状況を分析。
         
@@ -53,10 +52,10 @@ class IndexPerformanceAnalyzer:
             WHERE schemaname = 'public'
             ORDER BY idx_scan DESC;
         """)
-        
+
         result = await self.session.execute(index_usage_query)
         rows = result.fetchall()
-        
+
         return {
             "index_usage": [
                 {
@@ -71,7 +70,7 @@ class IndexPerformanceAnalyzer:
                 for row in rows
             ]
         }
-    
+
     async def analyze_query_plans(self) -> dict[str, Any]:
         """主要なクエリのプランを分析。
         
@@ -114,7 +113,7 @@ class IndexPerformanceAnalyzer:
                 """,
             },
         ]
-        
+
         plans = {}
         for query_info in queries_to_analyze:
             try:
@@ -123,9 +122,9 @@ class IndexPerformanceAnalyzer:
                 plans[query_info["name"]] = self._parse_query_plan(plan_data)
             except Exception as e:
                 plans[query_info["name"]] = {"error": str(e)}
-        
+
         return {"query_plans": plans}
-    
+
     def _parse_query_plan(self, plan_json: str) -> dict[str, Any]:
         """クエリプランを解析。
         
@@ -136,7 +135,7 @@ class IndexPerformanceAnalyzer:
             解析されたプラン情報
         """
         plan = json.loads(plan_json)[0]
-        
+
         return {
             "execution_time": plan.get("Execution Time", 0),
             "planning_time": plan.get("Planning Time", 0),
@@ -145,7 +144,7 @@ class IndexPerformanceAnalyzer:
             "node_type": plan["Plan"]["Node Type"],
             "rows": plan["Plan"].get("Actual Rows", 0),
         }
-    
+
     def _check_index_usage(self, plan_node: dict[str, Any]) -> bool:
         """プランノードでインデックスが使用されているか確認。
         
@@ -161,18 +160,18 @@ class IndexPerformanceAnalyzer:
             "Bitmap Index Scan",
             "Index Scan Backward",
         }
-        
+
         if plan_node.get("Node Type") in index_scan_types:
             return True
-        
+
         # 子ノードを再帰的にチェック
         if "Plans" in plan_node:
             for child in plan_node["Plans"]:
                 if self._check_index_usage(child):
                     return True
-        
+
         return False
-    
+
     async def analyze_table_statistics(self) -> dict[str, Any]:
         """テーブル統計情報を分析。
         
@@ -197,10 +196,10 @@ class IndexPerformanceAnalyzer:
             WHERE schemaname = 'public'
             ORDER BY n_live_tup DESC;
         """)
-        
+
         result = await self.session.execute(stats_query)
         rows = result.fetchall()
-        
+
         return {
             "table_statistics": [
                 {
@@ -220,7 +219,7 @@ class IndexPerformanceAnalyzer:
                 for row in rows
             ]
         }
-    
+
     async def generate_recommendations(self, analysis: dict[str, Any]) -> list[str]:
         """分析結果に基づく推奨事項を生成。
         
@@ -231,7 +230,7 @@ class IndexPerformanceAnalyzer:
             推奨事項のリスト
         """
         recommendations = []
-        
+
         # 未使用インデックスの確認
         if "index_usage" in analysis:
             unused_indexes = [
@@ -243,7 +242,7 @@ class IndexPerformanceAnalyzer:
                     f"未使用のインデックスが{len(unused_indexes)}個見つかりました。"
                     "削除を検討してください。"
                 )
-        
+
         # デッドタプルの確認
         if "table_statistics" in analysis:
             high_dead_tuple_tables = [
@@ -255,7 +254,7 @@ class IndexPerformanceAnalyzer:
                     f"デッドタプル比率が高いテーブルが{len(high_dead_tuple_tables)}個"
                     "見つかりました。VACUUMの実行を検討してください。"
                 )
-        
+
         # クエリプランの確認
         if "query_plans" in analysis:
             slow_queries = [
@@ -267,35 +266,35 @@ class IndexPerformanceAnalyzer:
                     f"実行時間が100ms以上のクエリが{len(slow_queries)}個"
                     "見つかりました。最適化を検討してください。"
                 )
-        
+
         return recommendations
 
 
 async def main() -> None:
     """メイン実行関数。"""
     settings = Settings()
-    
+
     # PostgreSQL接続の場合のみ実行
     if "postgresql" not in settings.database_url:
         print("このスクリプトはPostgreSQLでのみ動作します。")
         return
-    
+
     print("インデックスパフォーマンス分析を開始します...")
     print("=" * 60)
-    
+
     async with db_manager.session() as session:
         analyzer = IndexPerformanceAnalyzer(session)
-        
+
         # 各種分析を実行
         print("\n1. インデックス使用状況の分析...")
         index_usage = await analyzer.analyze_index_usage()
-        
+
         print("\n2. クエリプランの分析...")
         query_plans = await analyzer.analyze_query_plans()
-        
+
         print("\n3. テーブル統計の分析...")
         table_stats = await analyzer.analyze_table_statistics()
-        
+
         # 結果を統合
         analysis_report = {
             **index_usage,
@@ -303,21 +302,21 @@ async def main() -> None:
             **table_stats,
             "timestamp": datetime.now(UTC).isoformat(),
         }
-        
+
         # 推奨事項を生成
         recommendations = await analyzer.generate_recommendations(analysis_report)
         analysis_report["recommendations"] = recommendations
-        
+
         # レポートを出力
         print("\n" + "=" * 60)
         print("分析レポート")
         print("=" * 60)
-        
+
         # インデックス使用状況
         print("\n■ インデックス使用状況:")
         for idx in analysis_report.get("index_usage", [])[:10]:
             print(f"  - {idx['index']}: {idx['scans']}スキャン ({idx['usage']})")
-        
+
         # クエリプラン
         print("\n■ クエリパフォーマンス:")
         for name, plan in analysis_report.get("query_plans", {}).items():
@@ -326,7 +325,7 @@ async def main() -> None:
                     f"  - {name}: {plan.get('total_time', 0):.2f}ms "
                     f"(インデックス使用: {plan.get('uses_index', False)})"
                 )
-        
+
         # テーブル統計
         print("\n■ テーブル統計:")
         for tbl in analysis_report.get("table_statistics", [])[:5]:
@@ -334,17 +333,17 @@ async def main() -> None:
                 f"  - {tbl['table']}: {tbl['live_tuples']}行 "
                 f"(デッドタプル率: {tbl['dead_tuple_ratio']:.1%})"
             )
-        
+
         # 推奨事項
         print("\n■ 推奨事項:")
         for rec in recommendations:
             print(f"  • {rec}")
-        
+
         # JSONファイルに保存
         output_file = f"index_analysis_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(analysis_report, f, indent=2, ensure_ascii=False, default=str)
-        
+
         print(f"\n詳細レポートを{output_file}に保存しました。")
 
 

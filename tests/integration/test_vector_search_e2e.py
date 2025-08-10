@@ -36,7 +36,7 @@ from src.infrastructure.repositories import (
 @pytest.mark.integration
 @pytest.mark.skipif(
     "TEST_DATABASE_URL" not in os.environ,
-    reason="E2E tests require PostgreSQL with pgvector"
+    reason="E2E tests require PostgreSQL with pgvector",
 )
 class TestVectorSearchE2E:
     """PostgreSQL用E2E統合テストクラス。"""
@@ -141,8 +141,10 @@ class TestVectorSearchE2E:
             limit=10,
         )
         keyword_results = await e2e_setup["search"].execute(keyword_search)
-        print(f"\nKeyword search results: {len(keyword_results.results)} documents found")
-        
+        print(
+            f"\nKeyword search results: {len(keyword_results.results)} documents found"
+        )
+
         # ベクトル検索を実行
         vector_search = SearchDocumentsInput(
             query="ベクトルデータベースを使った検索",
@@ -154,8 +156,10 @@ class TestVectorSearchE2E:
 
         # PostgreSQLではFTSが設定されていない可能性があるため、結果が0でも許容
         if len(keyword_results.results) == 0:
-            print("WARNING: Keyword search returned no results (FTS may not be configured)")
-        
+            print(
+                "WARNING: Keyword search returned no results (FTS may not be configured)"
+            )
+
         # ベクトル検索結果の検証（警告のみ）
         if len(vector_results.results) == 0:
             print("WARNING: Vector search returned no results")
@@ -174,7 +178,6 @@ class TestVectorSearchE2E:
         # ハイブリッド検索結果の検証
         assert len(hybrid_results.results) > 0
         assert hybrid_results.total_count > 0
-        import pdb; pdb.set_trace()
 
     async def test_similarity_threshold(self, e2e_setup, use_postgres):
         """類似度閾値のテスト。"""
@@ -278,7 +281,7 @@ class TestVectorSearchE2E:
         for i in range(num_documents):
             doc_id = DocumentId.generate()
             content = f"This is test document number {i}. It contains various keywords for testing search functionality."
-            
+
             metadata = DocumentMetadata(
                 file_name=f"doc_{i}.txt",
                 file_size=len(content.encode()),
@@ -338,5 +341,7 @@ class TestVectorSearchE2E:
         assert len(results.results) > 0
         assert elapsed_time < 5.0  # 5秒以内に完了することを確認
 
-        print(f"\nVector search with {num_documents} documents took {elapsed_time:.3f} seconds")
+        print(
+            f"\nVector search with {num_documents} documents took {elapsed_time:.3f} seconds"
+        )
         print(f"Found {len(results.results)} results")

@@ -34,10 +34,10 @@ class MockEmbeddingService(EmbeddingService):
             埋め込みベクトル
         """
         import math
-        
+
         # テキストから特徴を抽出
         text_lower = text.lower()
-        
+
         # 共通の特徴キーワード（RAGシステム関連）
         feature_keywords = {
             "rag": 1.0,
@@ -57,17 +57,17 @@ class MockEmbeddingService(EmbeddingService):
             "機能": 0.5,
             "api": 0.6,
         }
-        
+
         # ベースベクトルを作成（テキストのハッシュから）
         hash_obj = hashlib.sha256(text.encode())
         hash_bytes = hash_obj.digest()
-        
+
         embedding = []
         for i in range(self._dimensions):
             byte_idx = i % len(hash_bytes)
             # ベース値（小さくしておく）
             base_value = (hash_bytes[byte_idx] / 255.0) * 0.2 - 0.1
-            
+
             # 特徴キーワードに基づいてベクトルを調整
             feature_contribution = 0.0
             for keyword, weight in feature_keywords.items():
@@ -76,23 +76,23 @@ class MockEmbeddingService(EmbeddingService):
                     keyword_hash = hashlib.md5(keyword.encode()).digest()
                     keyword_pattern = keyword_hash[i % len(keyword_hash)] / 255.0
                     feature_contribution += weight * keyword_pattern * 0.5
-            
+
             # 全体的な正規化のために sin/cos パターンを追加
             angle = (i / self._dimensions) * 2 * math.pi
             pattern_value = math.sin(angle) * 0.1 + math.cos(angle * 2) * 0.05
-            
+
             # 最終的な値を計算
             value = base_value + feature_contribution + pattern_value
-            
+
             # -1から1の範囲にクリップ
             value = max(-1.0, min(1.0, value))
             embedding.append(float(value))
-        
+
         # ベクトルを正規化（単位ベクトルにする）
         norm = math.sqrt(sum(v * v for v in embedding))
         if norm > 0:
             embedding = [v / norm for v in embedding]
-        
+
         return embedding
 
     async def generate_embedding(self, text: str) -> EmbeddingResult:

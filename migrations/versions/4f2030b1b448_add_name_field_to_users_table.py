@@ -5,17 +5,16 @@ Revises: bb2bae6b1e8f
 Create Date: 2025-08-06 10:31:14.605431
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '4f2030b1b448'
-down_revision: Union[str, Sequence[str], None] = 'bb2bae6b1e8f'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = 'bb2bae6b1e8f'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -26,17 +25,17 @@ def upgrade() -> None:
     #            existing_type=sa.CHAR(length=32),
     #            type_=src.infrastructure.database.models.UUID(),
     #            existing_nullable=False)
-    
+
     # Add name column as nullable first for SQLite compatibility
     op.add_column('users', sa.Column('name', sa.String(length=255), nullable=True))
-    
+
     # Set default values for existing rows
     op.execute("UPDATE users SET name = 'User' WHERE name IS NULL")
-    
+
     # SQLite doesn't support ALTER COLUMN SET NOT NULL, so we'll leave it nullable
     # In production with PostgreSQL, you would use:
     # op.alter_column('users', 'name', nullable=False)
-    
+
     # Skip UUID type changes for SQLite compatibility
     # op.alter_column('users', 'id',
     #            existing_type=sa.CHAR(length=32),
@@ -53,9 +52,9 @@ def downgrade() -> None:
     #            existing_type=src.infrastructure.database.models.UUID(),
     #            type_=sa.CHAR(length=32),
     #            existing_nullable=False)
-    
+
     op.drop_column('users', 'name')
-    
+
     # Skip UUID type changes for SQLite compatibility
     # op.alter_column('sessions', 'user_id',
     #            existing_type=src.infrastructure.database.models.UUID(),
