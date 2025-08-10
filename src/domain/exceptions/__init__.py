@@ -25,6 +25,14 @@ from .embedding_exceptions import (
     InvalidTextError,
     ModelNotAvailableError,
 )
+from .llm_exceptions import (
+    LLMAuthenticationError,
+    LLMInvalidRequestError,
+    LLMModelNotAvailableError,
+    LLMRateLimitError,
+    LLMServiceError,
+    LLMTimeoutError,
+)
 
 __all__ = [
     # Base
@@ -51,4 +59,11 @@ __all__ = [
     "EmbeddingServiceError",
     "InvalidTextError",
     "ModelNotAvailableError",
+    # LLM
+    "LLMServiceError",
+    "LLMModelNotAvailableError",
+    "LLMRateLimitError",
+    "LLMInvalidRequestError",
+    "LLMTimeoutError",
+    "LLMAuthenticationError",
 ]
