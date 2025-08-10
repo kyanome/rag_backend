@@ -75,7 +75,7 @@ class VectorDataGenerator:
 
         # タイトルを別途生成
         title = faker.sentence(nb_words=6)
-        
+
         metadata = DocumentMetadata(
             file_name=f"test_doc_{index}_{faker.file_name(extension='pdf')}",
             file_size=random.randint(1000, 10000000),
@@ -122,7 +122,7 @@ class VectorDataGenerator:
         chunks = []
         chunk_size = 500
         overlap = 100
-        
+
         # 先にtotal_chunksを計算
         total_chunks = 0
         for i in range(0, len(content), chunk_size - overlap):
