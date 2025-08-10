@@ -58,7 +58,7 @@ def upgrade() -> None:
             """
             CREATE INDEX IF NOT EXISTS idx_document_chunks_metadata_gin
             ON document_chunks
-            USING gin(chunk_metadata);
+            USING gin(chunk_metadata::jsonb);
         """
         )
 
@@ -83,7 +83,7 @@ def upgrade() -> None:
             """
             CREATE INDEX IF NOT EXISTS idx_documents_metadata_gin
             ON documents
-            USING gin(document_metadata);
+            USING gin(document_metadata::jsonb);
         """
         )
 
