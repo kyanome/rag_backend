@@ -172,7 +172,7 @@ Please provide a comprehensive answer based on the context above. If the context
 
         return answer
 
-    def stream_answer(
+    async def stream_answer(
         self,
         query: RAGQuery,
         context: RAGContext,
@@ -186,41 +186,37 @@ Please provide a comprehensive answer based on the context above. If the context
         Yields:
             応答テキストのチャンク
         """
+        # プロンプトを構築
+        prompt = self.build_prompt(query, context)
 
-        async def _stream() -> AsyncIterator[str]:
-            # プロンプトを構築
-            prompt = self.build_prompt(query, context)
+        # LLMリクエストを作成
+        messages = [
+            LLMMessage(
+                role=LLMRole.SYSTEM,
+                content=self._system_prompt_template.format(language="Japanese"),
+            ),
+            LLMMessage(
+                role=LLMRole.USER,
+                content=prompt,
+            ),
+        ]
 
-            # LLMリクエストを作成
-            messages = [
-                LLMMessage(
-                    role=LLMRole.SYSTEM,
-                    content=self._system_prompt_template.format(language="Japanese"),
-                ),
-                LLMMessage(
-                    role=LLMRole.USER,
-                    content=prompt,
-                ),
-            ]
+        llm_request = LLMRequest(
+            messages=messages,
+            model=self._llm_service.get_model_name(),
+            temperature=query.temperature,
+            max_tokens=1000,
+            top_p=1.0,
+            frequency_penalty=0.0,
+            presence_penalty=0.0,
+            stop=None,
+            stream=True,
+        )
 
-            llm_request = LLMRequest(
-                messages=messages,
-                model=self._llm_service.get_model_name(),
-                temperature=query.temperature,
-                max_tokens=1000,
-                top_p=1.0,
-                frequency_penalty=0.0,
-                presence_penalty=0.0,
-                stop=None,
-                stream=True,
-            )
-
-            # ストリーミング応答を生成
-            async for chunk in self._llm_service.stream_response(llm_request):
-                if chunk.delta:
-                    yield chunk.delta
-
-        return _stream()
+        # ストリーミング応答を生成
+        async for chunk in self._llm_service.stream_response(llm_request):
+            if chunk.delta:
+                yield chunk.delta
 
     def build_prompt(
         self,

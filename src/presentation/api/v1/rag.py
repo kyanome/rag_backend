@@ -3,6 +3,7 @@
 検索拡張生成（RAG）のAPIエンドポイントを定義する。
 """
 
+import json
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -263,13 +264,19 @@ async def stream_rag_query(
         async def generate() -> AsyncIterator[bytes]:
             try:
                 async for chunk in use_case.stream(input_dto):
-                    yield chunk.encode("utf-8")
+                    # JSON形式でチャンクを送信
+                    json_chunk = json.dumps({"type": "text", "content": chunk})
+                    yield f"{json_chunk}\n".encode()
+                # 終了マーカーを送信
+                yield json.dumps({"type": "done"}).encode("utf-8") + b"\n"
             except Exception as e:
-                yield f"\n\nError: {str(e)}".encode()
+                # エラーチャンクを送信
+                error_chunk = json.dumps({"type": "error", "error": str(e)})
+                yield f"{error_chunk}\n".encode()
 
         return StreamingResponse(
             generate(),
-            media_type="text/plain",
+            media_type="application/x-ndjson",
             headers={
                 "Cache-Control": "no-cache",
                 "X-Content-Type-Options": "nosniff",

@@ -134,11 +134,14 @@ class TestRAGPipelineIntegration:
             )
 
         assert response.status_code == 200
-        assert response.headers["content-type"] == "text/plain; charset=utf-8"
+        assert response.headers["content-type"] == "application/x-ndjson"
 
         # ストリーミング応答を確認
         content = response.text
-        assert "This is a streaming RAG response." in content
+        # NDJSON形式で送信されるため、JSONチャンクを含む
+        # 応答テキストが含まれていることを確認
+        assert "RAG response" in content
+        assert '{"type": "done"}' in content
 
         # 依存性をクリア
         app.dependency_overrides.clear()

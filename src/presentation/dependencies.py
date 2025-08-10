@@ -100,8 +100,12 @@ async def get_vector_search_repository(
     if "postgresql" in settings.database_url:
         return PgVectorRepositoryImpl(session)
 
-    # SQLiteの場合はNoneを返す（ベクトル検索は無効）
-    return None
+    # SQLiteの場合はモックを返す（開発用）
+    from ..infrastructure.repositories.mock_vector_repository import (
+        MockVectorSearchRepository,
+    )
+
+    return MockVectorSearchRepository()
 
 
 async def get_chunk_document_use_case(
