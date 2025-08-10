@@ -9,10 +9,15 @@ from ..application.use_cases.chunk_document import ChunkDocumentUseCase
 from ..application.use_cases.delete_document import DeleteDocumentUseCase
 from ..application.use_cases.get_document import GetDocumentUseCase
 from ..application.use_cases.get_document_list import GetDocumentListUseCase
+from ..application.use_cases.rag import (
+    BuildRAGContextUseCase,
+    GenerateRAGAnswerUseCase,
+    ProcessRAGQueryUseCase,
+)
 from ..application.use_cases.search_documents import SearchDocumentsUseCase
 from ..application.use_cases.update_document import UpdateDocumentUseCase
 from ..application.use_cases.upload_document import UploadDocumentUseCase
-from ..domain.externals import LLMService
+from ..domain.externals import LLMService, RAGService
 from ..domain.repositories import VectorSearchRepository
 from ..domain.services import ChunkingService
 from ..infrastructure.config.settings import get_settings
@@ -23,6 +28,7 @@ from ..infrastructure.externals.chunking_strategies import (
     SimpleChunkingStrategy,
 )
 from ..infrastructure.externals.llms import LLMServiceFactory
+from ..infrastructure.externals.rag import RAGServiceImpl
 from ..infrastructure.externals.text_extractors import CompositeTextExtractor
 from ..infrastructure.repositories import (
     DocumentRepositoryImpl,
@@ -312,3 +318,79 @@ def get_llm_service() -> LLMService:
     """
     settings = get_settings()
     return LLMServiceFactory.from_settings(settings)
+
+
+def get_rag_service(
+    llm_service: LLMService = Depends(get_llm_service),
+) -> RAGService:
+    """RAGサービスを取得する。
+
+    Args:
+        llm_service: LLMサービス
+
+    Returns:
+        RAGService: RAGサービス
+    """
+    return RAGServiceImpl(llm_service=llm_service)
+
+
+async def get_build_rag_context_use_case(
+    document_repository: DocumentRepositoryImpl = Depends(get_document_repository),
+) -> BuildRAGContextUseCase:
+    """RAGコンテキスト構築ユースケースを取得する。
+
+    Args:
+        document_repository: 文書リポジトリ
+
+    Returns:
+        BuildRAGContextUseCase: RAGコンテキスト構築ユースケース
+    """
+    return BuildRAGContextUseCase(document_repository=document_repository)
+
+
+async def get_generate_rag_answer_use_case(
+    llm_service: LLMService = Depends(get_llm_service),
+    rag_service: RAGService = Depends(get_rag_service),
+) -> GenerateRAGAnswerUseCase:
+    """RAG回答生成ユースケースを取得する。
+
+    Args:
+        llm_service: LLMサービス
+        rag_service: RAGサービス
+
+    Returns:
+        GenerateRAGAnswerUseCase: RAG回答生成ユースケース
+    """
+    return GenerateRAGAnswerUseCase(
+        llm_service=llm_service,
+        rag_service=rag_service,
+    )
+
+
+def get_process_rag_query_use_case(
+    search_use_case: SearchDocumentsUseCase = Depends(get_search_documents_use_case),
+    build_context_use_case: BuildRAGContextUseCase = Depends(
+        get_build_rag_context_use_case
+    ),
+    generate_answer_use_case: GenerateRAGAnswerUseCase = Depends(
+        get_generate_rag_answer_use_case
+    ),
+    rag_service: RAGService = Depends(get_rag_service),
+) -> ProcessRAGQueryUseCase:
+    """RAGクエリ処理ユースケースを取得する。
+
+    Args:
+        search_use_case: 文書検索ユースケース
+        build_context_use_case: コンテキスト構築ユースケース
+        generate_answer_use_case: 回答生成ユースケース
+        rag_service: RAGサービス
+
+    Returns:
+        ProcessRAGQueryUseCase: RAGクエリ処理ユースケース
+    """
+    return ProcessRAGQueryUseCase(
+        search_use_case=search_use_case,
+        build_context_use_case=build_context_use_case,
+        generate_answer_use_case=generate_answer_use_case,
+        rag_service=rag_service,
+    )
