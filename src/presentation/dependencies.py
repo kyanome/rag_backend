@@ -9,9 +9,11 @@ from ..application.use_cases.chunk_document import ChunkDocumentUseCase
 from ..application.use_cases.delete_document import DeleteDocumentUseCase
 from ..application.use_cases.get_document import GetDocumentUseCase
 from ..application.use_cases.get_document_list import GetDocumentListUseCase
+from ..application.use_cases.search_documents import SearchDocumentsUseCase
 from ..application.use_cases.update_document import UpdateDocumentUseCase
 from ..application.use_cases.upload_document import UploadDocumentUseCase
 from ..domain.externals import LLMService
+from ..domain.repositories import VectorSearchRepository
 from ..domain.services import ChunkingService
 from ..infrastructure.config.settings import get_settings
 from ..infrastructure.database.connection import async_session_factory
@@ -24,6 +26,7 @@ from ..infrastructure.externals.llms import LLMServiceFactory
 from ..infrastructure.externals.text_extractors import CompositeTextExtractor
 from ..infrastructure.repositories import (
     DocumentRepositoryImpl,
+    PgVectorRepositoryImpl,
     SessionRepositoryImpl,
     UserRepositoryImpl,
 )
@@ -73,13 +76,39 @@ async def get_document_repository(
     return DocumentRepositoryImpl(session, file_storage_service)
 
 
+async def get_vector_search_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> VectorSearchRepository | None:
+    """ベクトル検索リポジトリを取得する。
+
+    Args:
+        session: データベースセッション
+
+    Returns:
+        VectorSearchRepository: ベクトル検索リポジトリ（PostgreSQL使用時）
+        None: SQLite使用時
+    """
+    settings = get_settings()
+
+    # PostgreSQLの場合のみPgVectorRepositoryを返す
+    if "postgresql" in settings.database_url:
+        return PgVectorRepositoryImpl(session)
+
+    # SQLiteの場合はNoneを返す（ベクトル検索は無効）
+    return None
+
+
 async def get_chunk_document_use_case(
     document_repository: DocumentRepositoryImpl = Depends(get_document_repository),
+    vector_search_repository: VectorSearchRepository | None = Depends(
+        get_vector_search_repository
+    ),
 ) -> ChunkDocumentUseCase:
     """文書チャンク化ユースケースを取得する。
 
     Args:
         document_repository: 文書リポジトリ
+        vector_search_repository: ベクトル検索リポジトリ（オプション）
 
     Returns:
         ChunkDocumentUseCase: 文書チャンク化ユースケース
@@ -127,6 +156,7 @@ async def get_chunk_document_use_case(
         chunking_strategy=chunking_strategy,
         chunking_service=chunking_service,
         embedding_service=embedding_service,
+        vector_search_repository=vector_search_repository,
     )
 
 
@@ -217,6 +247,33 @@ async def get_delete_document_use_case(
         DeleteDocumentUseCase: 文書削除ユースケース
     """
     return DeleteDocumentUseCase(document_repository=document_repository)
+
+
+async def get_search_documents_use_case(
+    document_repository: DocumentRepositoryImpl = Depends(get_document_repository),
+    vector_search_repository: VectorSearchRepository = Depends(
+        get_vector_search_repository
+    ),
+) -> SearchDocumentsUseCase:
+    """文書検索ユースケースを取得する。
+
+    Args:
+        document_repository: 文書リポジトリ
+        vector_search_repository: ベクトル検索リポジトリ
+
+    Returns:
+        SearchDocumentsUseCase: 文書検索ユースケース
+    """
+    # 埋め込みサービスを取得（embeddings依存性モジュールから）
+    from .api.dependencies.embeddings import get_embedding_service
+
+    embedding_service = get_embedding_service()
+
+    return SearchDocumentsUseCase(
+        document_repository=document_repository,
+        vector_search_repository=vector_search_repository,
+        embedding_service=embedding_service,
+    )
 
 
 async def get_user_repository(

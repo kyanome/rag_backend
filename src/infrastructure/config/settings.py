@@ -157,6 +157,30 @@ class Settings(BaseSettings):
         description="LLM APIタイムアウト（秒）",
     )
 
+    # Vector Storage Configuration
+    enable_vector_storage: bool = Field(
+        default=True,
+        description="ベクトルストレージへの保存を有効化",
+    )
+    vector_storage_batch_size: int = Field(
+        default=100,
+        description="ベクトル保存バッチサイズ",
+        ge=1,
+        le=1000,
+    )
+    vector_storage_max_retries: int = Field(
+        default=3,
+        description="ベクトル保存の最大リトライ回数",
+        ge=0,
+        le=10,
+    )
+    vector_storage_retry_delay: float = Field(
+        default=1.0,
+        description="ベクトル保存リトライ時の初期遅延（秒）",
+        ge=0.1,
+        le=60.0,
+    )
+
     # CORS Configuration
     cors_allowed_origins: list[str] = Field(
         default=["http://localhost:3000", "http://localhost:3001"],

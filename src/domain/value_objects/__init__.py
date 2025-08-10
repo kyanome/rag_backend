@@ -18,6 +18,8 @@ from .llm_types import (
 )
 from .page_info import PageInfo
 from .prompt_template import PromptTemplate, PromptTemplateLibrary, PromptVariable
+from .search_query import SearchQuery, SearchType
+from .search_result import ConfidenceLevel, SearchResult, SearchResultItem
 from .user_id import UserId
 from .user_role import Permission, RoleName, UserRole
 from .vector_search_result import VectorSearchResult
@@ -48,4 +50,10 @@ __all__ = [
     "PromptVariable",
     "PromptTemplate",
     "PromptTemplateLibrary",
+    # Search
+    "SearchQuery",
+    "SearchType",
+    "SearchResult",
+    "SearchResultItem",
+    "ConfidenceLevel",
 ]

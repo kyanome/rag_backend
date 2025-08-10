@@ -4,7 +4,7 @@ import base64
 import uuid
 from typing import Any, cast
 
-from sqlalchemy import BinaryExpression, and_, func, or_, select
+from sqlalchemy import BinaryExpression, ColumnElement, String, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -62,7 +62,12 @@ class DocumentRepositoryImpl(DocumentRepository):
                 # 更新の場合
                 existing.title = document.title  # type: ignore[assignment]
                 # バイナリコンテンツはBase64エンコードして保存
-                existing.content = base64.b64encode(document.content).decode("ascii") if document.content else ""  # type: ignore[assignment]
+                content_str = (
+                    base64.b64encode(document.content).decode("ascii")
+                    if document.content
+                    else ""
+                )
+                existing.content = content_str  # type: ignore[assignment]
                 existing.document_metadata = {  # type: ignore[assignment]
                     "file_name": document.metadata.file_name,
                     "file_size": document.metadata.file_size,
@@ -321,3 +326,132 @@ class DocumentRepositoryImpl(DocumentRepository):
         models = result.scalars().all()
 
         return [model.to_domain() for model in models]
+
+    def _to_list_item(self, model: DocumentModel) -> DocumentListItem:
+        """DocumentModelからDocumentListItemに変換する。
+
+        Args:
+            model: DocumentModel
+
+        Returns:
+            DocumentListItem
+        """
+        metadata_dict: dict[str, Any] = model.document_metadata or {}  # type: ignore[assignment]
+        return DocumentListItem(
+            id=DocumentId(value=str(model.id)),
+            title=model.title,  # type: ignore[arg-type]
+            file_name=metadata_dict.get("file_name", ""),
+            file_size=metadata_dict.get("file_size", 0),
+            content_type=metadata_dict.get("content_type", ""),
+            category=metadata_dict.get("category"),
+            tags=metadata_dict.get("tags", []),
+            author=metadata_dict.get("author"),
+            created_at=model.created_at,  # type: ignore[arg-type]
+            updated_at=model.updated_at,  # type: ignore[arg-type]
+        )
+
+    async def search_by_keyword(
+        self,
+        keyword: str,
+        limit: int = 10,
+        offset: int = 0,
+    ) -> tuple[list[DocumentListItem], int]:
+        """キーワードで文書を全文検索する。
+
+        PostgreSQLの全文検索機能を使用して、文書のタイトルと内容を検索する。
+        SQLiteの場合はLIKE演算子を使用したフォールバック実装。
+
+        Args:
+            keyword: 検索キーワード
+            limit: 取得する最大件数
+            offset: スキップする件数
+
+        Returns:
+            検索結果のリストと総件数のタプル
+        """
+        # キーワードのサニタイズ（SQLインジェクション対策）
+        keyword = keyword.strip()
+        if not keyword:
+            return [], 0
+
+        # PostgreSQLとSQLiteの判定
+        dialect_name = self.session.bind.dialect.name if self.session.bind else "sqlite"
+
+        # 検索条件を格納する変数
+        search_condition: BinaryExpression[bool] | ColumnElement[bool]
+
+        if dialect_name == "postgresql":
+            # PostgreSQL: 全文検索を使用
+            # タイトルと内容を結合してts_vectorを作成し、plainto_tsqueryで検索
+            search_vector = func.to_tsvector(
+                "simple",  # 日本語対応のため'simple'辞書を使用
+                func.concat(
+                    func.coalesce(DocumentModel.title, ""),
+                    " ",
+                    func.coalesce(DocumentModel.content, ""),
+                ),
+            )
+            search_query = func.plainto_tsquery("simple", keyword)
+
+            # ランク付けのためのts_rankを使用
+            rank = func.ts_rank(search_vector, search_query)
+
+            # 検索条件
+            search_condition = search_vector.op("@@")(search_query)
+
+            # カウントクエリ
+            count_stmt = (
+                select(func.count()).select_from(DocumentModel).where(search_condition)
+            )
+            total_count = await self.session.scalar(count_stmt)
+
+            # データ取得クエリ（ランクでソート）
+            stmt = (
+                select(DocumentModel, rank)
+                .where(search_condition)
+                .order_by(rank.desc(), DocumentModel.created_at.desc())
+                .limit(limit)
+                .offset(offset)
+            )
+        else:
+            # SQLite: LIKE演算子を使用したフォールバック
+            search_pattern = f"%{keyword}%"
+            search_condition = or_(
+                DocumentModel.title.ilike(search_pattern),
+                func.cast(DocumentModel.content, String).ilike(search_pattern),
+            )
+
+            # カウントクエリ
+            count_stmt = (
+                select(func.count()).select_from(DocumentModel).where(search_condition)
+            )
+            total_count = await self.session.scalar(count_stmt)
+
+            # データ取得クエリ（作成日時でソート）
+            stmt = (
+                select(DocumentModel)
+                .where(search_condition)
+                .order_by(DocumentModel.created_at.desc())
+                .limit(limit)
+                .offset(offset)
+            )
+
+        # クエリ実行
+        if total_count == 0:
+            return [], 0
+
+        result = await self.session.execute(stmt)
+
+        # 結果をDocumentListItemに変換
+        items = []
+        if dialect_name == "postgresql":
+            # PostgreSQLの場合はランク情報も含まれる
+            for row in result:
+                model = row[0]
+                items.append(self._to_list_item(model))
+        else:
+            # SQLiteの場合
+            models = result.scalars().all()
+            items = [self._to_list_item(model) for model in models]
+
+        return items, total_count or 0

@@ -58,10 +58,12 @@ class PgVectorRepositoryImpl(VectorSearchRepository):
         query = query.order_by(text("similarity DESC")).limit(limit)
 
         # パラメータをバインドして実行
+        # pgvectorは[1,2,3]形式の文字列として受け取る
+        query_vector_str = "[" + ",".join(map(str, query_embedding)) + "]"
         result = await self._session.execute(
             query,
             {
-                "query_vector": str(query_embedding),  # pgvectorは文字列形式で受け取る
+                "query_vector": query_vector_str,
                 "threshold": similarity_threshold,
             },
         )
