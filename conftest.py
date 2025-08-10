@@ -8,6 +8,7 @@ import pytest
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["TESTING"] = "1"
 
+
 @pytest.fixture(scope="session")
 def anyio_backend() -> str:
     """anyioのバックエンドを指定。"""

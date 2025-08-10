@@ -20,7 +20,7 @@ class IndexPerformanceAnalyzer:
 
     def __init__(self, session: AsyncSession) -> None:
         """初期化。
-        
+
         Args:
             session: データベースセッション
         """
@@ -28,12 +28,13 @@ class IndexPerformanceAnalyzer:
 
     async def analyze_index_usage(self) -> dict[str, Any]:
         """インデックス使用状況を分析。
-        
+
         Returns:
             インデックス使用状況のレポート
         """
         # PostgreSQL専用のクエリ
-        index_usage_query = text("""
+        index_usage_query = text(
+            """
             SELECT 
                 schemaname,
                 tablename,
@@ -51,7 +52,8 @@ class IndexPerformanceAnalyzer:
             FROM pg_stat_user_indexes
             WHERE schemaname = 'public'
             ORDER BY idx_scan DESC;
-        """)
+        """
+        )
 
         result = await self.session.execute(index_usage_query)
         rows = result.fetchall()
@@ -73,7 +75,7 @@ class IndexPerformanceAnalyzer:
 
     async def analyze_query_plans(self) -> dict[str, Any]:
         """主要なクエリのプランを分析。
-        
+
         Returns:
             クエリプランのレポート
         """
@@ -127,10 +129,10 @@ class IndexPerformanceAnalyzer:
 
     def _parse_query_plan(self, plan_json: str) -> dict[str, Any]:
         """クエリプランを解析。
-        
+
         Args:
             plan_json: JSON形式のクエリプラン
-        
+
         Returns:
             解析されたプラン情報
         """
@@ -147,10 +149,10 @@ class IndexPerformanceAnalyzer:
 
     def _check_index_usage(self, plan_node: dict[str, Any]) -> bool:
         """プランノードでインデックスが使用されているか確認。
-        
+
         Args:
             plan_node: プランノード
-        
+
         Returns:
             インデックスが使用されているか
         """
@@ -174,11 +176,12 @@ class IndexPerformanceAnalyzer:
 
     async def analyze_table_statistics(self) -> dict[str, Any]:
         """テーブル統計情報を分析。
-        
+
         Returns:
             テーブル統計のレポート
         """
-        stats_query = text("""
+        stats_query = text(
+            """
             SELECT 
                 schemaname,
                 tablename,
@@ -195,7 +198,8 @@ class IndexPerformanceAnalyzer:
             FROM pg_stat_user_tables
             WHERE schemaname = 'public'
             ORDER BY n_live_tup DESC;
-        """)
+        """
+        )
 
         result = await self.session.execute(stats_query)
         rows = result.fetchall()
@@ -211,8 +215,12 @@ class IndexPerformanceAnalyzer:
                         if row.live_tuples + row.dead_tuples > 0
                         else 0
                     ),
-                    "last_vacuum": row.last_vacuum.isoformat() if row.last_vacuum else None,
-                    "last_analyze": row.last_analyze.isoformat() if row.last_analyze else None,
+                    "last_vacuum": (
+                        row.last_vacuum.isoformat() if row.last_vacuum else None
+                    ),
+                    "last_analyze": (
+                        row.last_analyze.isoformat() if row.last_analyze else None
+                    ),
                     "vacuum_count": row.vacuum_count,
                     "analyze_count": row.analyze_count,
                 }
@@ -222,10 +230,10 @@ class IndexPerformanceAnalyzer:
 
     async def generate_recommendations(self, analysis: dict[str, Any]) -> list[str]:
         """分析結果に基づく推奨事項を生成。
-        
+
         Args:
             analysis: 分析結果
-        
+
         Returns:
             推奨事項のリスト
         """
@@ -234,8 +242,7 @@ class IndexPerformanceAnalyzer:
         # 未使用インデックスの確認
         if "index_usage" in analysis:
             unused_indexes = [
-                idx for idx in analysis["index_usage"]
-                if idx["usage"] == "UNUSED"
+                idx for idx in analysis["index_usage"] if idx["usage"] == "UNUSED"
             ]
             if unused_indexes:
                 recommendations.append(
@@ -246,7 +253,8 @@ class IndexPerformanceAnalyzer:
         # デッドタプルの確認
         if "table_statistics" in analysis:
             high_dead_tuple_tables = [
-                tbl for tbl in analysis["table_statistics"]
+                tbl
+                for tbl in analysis["table_statistics"]
                 if tbl["dead_tuple_ratio"] > 0.2
             ]
             if high_dead_tuple_tables:
@@ -258,7 +266,8 @@ class IndexPerformanceAnalyzer:
         # クエリプランの確認
         if "query_plans" in analysis:
             slow_queries = [
-                name for name, plan in analysis["query_plans"].items()
+                name
+                for name, plan in analysis["query_plans"].items()
                 if isinstance(plan, dict) and plan.get("total_time", 0) > 100
             ]
             if slow_queries:
@@ -340,7 +349,9 @@ async def main() -> None:
             print(f"  • {rec}")
 
         # JSONファイルに保存
-        output_file = f"index_analysis_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
+        output_file = (
+            f"index_analysis_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
+        )
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(analysis_report, f, indent=2, ensure_ascii=False, default=str)
 
