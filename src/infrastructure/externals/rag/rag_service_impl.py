@@ -258,24 +258,44 @@ Please provide a comprehensive answer based on the context above. If the context
             抽出された引用のリスト
         """
         citations: list[Citation] = []
+        seen_citations = set()  # 重複チェック用
 
-        # [Document N] 形式の引用を探す
-        citation_pattern = r"\[Document (\d+)\]"
-        matches = re.findall(citation_pattern, answer_text)
+        # [Document N] または [N] 形式の引用を探す
+        citation_patterns = [
+            r"\[Document (\d+)\]",
+            r"\[(\d+)\]",
+        ]
 
-        for match in matches:
-            doc_index = int(match) - 1  # 1-indexed to 0-indexed
-            if 0 <= doc_index < len(context.search_results):
-                result = context.search_results[doc_index]
-                citation = Citation.from_search_result(result)
+        for pattern in citation_patterns:
+            matches = list(re.finditer(pattern, answer_text))
 
-                # 重複を避ける
-                if not any(
-                    c.document_id == citation.document_id
-                    and c.chunk_id == citation.chunk_id
-                    for c in citations
-                ):
-                    citations.append(citation)
+            for match in matches:
+                doc_index = int(match.group(1)) - 1  # 1-indexed to 0-indexed
+                if 0 <= doc_index < len(context.search_results):
+                    result = context.search_results[doc_index]
+
+                    # 重複チェック用のキー
+                    citation_key = (result.document_id, result.chunk_id)
+                    if citation_key not in seen_citations:
+                        citation = Citation.from_search_result(result)
+
+                        # 引用位置情報を追加
+                        citation.start_position = match.start()
+                        citation.end_position = match.end()
+
+                        # コンテキストを抽出（前後50文字）
+                        context_range = 50
+                        citation.context_before = answer_text[
+                            max(0, match.start() - context_range) : match.start()
+                        ].strip()
+                        citation.context_after = answer_text[
+                            match.end() : min(
+                                len(answer_text), match.end() + context_range
+                            )
+                        ].strip()
+
+                        citations.append(citation)
+                        seen_citations.add(citation_key)
 
         # 引用が見つからない場合、コンテンツマッチングで引用を生成
         if not citations:

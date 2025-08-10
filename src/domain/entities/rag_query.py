@@ -63,6 +63,10 @@ class Citation:
         chunk_index: チャンクインデックス
         content_snippet: 内容の抜粋
         relevance_score: 関連性スコア
+        start_position: 引用開始位置（オプション）
+        end_position: 引用終了位置（オプション）
+        context_before: 前のコンテキスト（オプション）
+        context_after: 後のコンテキスト（オプション）
     """
 
     document_id: DocumentId
@@ -71,6 +75,10 @@ class Citation:
     chunk_index: int | None = None
     content_snippet: str = ""
     relevance_score: float = 0.0
+    start_position: int | None = None
+    end_position: int | None = None
+    context_before: str | None = None
+    context_after: str | None = None
 
     def __post_init__(self) -> None:
         """初期化後の処理。"""
