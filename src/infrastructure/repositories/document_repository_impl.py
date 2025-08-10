@@ -62,7 +62,12 @@ class DocumentRepositoryImpl(DocumentRepository):
                 # 更新の場合
                 existing.title = document.title  # type: ignore[assignment]
                 # バイナリコンテンツはBase64エンコードして保存
-                existing.content = base64.b64encode(document.content).decode("ascii") if document.content else ""  # type: ignore[assignment]
+                content_str = (
+                    base64.b64encode(document.content).decode("ascii")
+                    if document.content
+                    else ""
+                )
+                existing.content = content_str  # type: ignore[assignment]
                 existing.document_metadata = {  # type: ignore[assignment]
                     "file_name": document.metadata.file_name,
                     "file_size": document.metadata.file_size,

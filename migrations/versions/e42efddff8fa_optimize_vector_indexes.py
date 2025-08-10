@@ -30,7 +30,7 @@ def upgrade() -> None:
             """
             CREATE INDEX IF NOT EXISTS idx_document_chunks_embedding_ivfflat
             ON document_chunks
-            USING ivfflat (embedding vector_cosine_ops)
+            USING ivfflat (embedding_vector vector_cosine_ops)
             WITH (lists = 100);
         """
         )

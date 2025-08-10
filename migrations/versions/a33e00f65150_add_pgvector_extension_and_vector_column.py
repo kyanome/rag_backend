@@ -55,15 +55,11 @@ def upgrade() -> None:
             """
             )
 
-            # Migrate existing embeddings from JSON to vector column
-            op.execute(
-                """
-                UPDATE document_chunks 
-                SET embedding_vector = embedding::vector 
-                WHERE embedding IS NOT NULL 
-                AND embedding_vector IS NULL
-            """
-            )
+            # Skip migration of existing data since this is for initial setup
+            # If you need to migrate existing data, use:
+            # UPDATE document_chunks
+            # SET embedding_vector = ('[' || regexp_replace(embedding::text, '^\[|\]$', '') || ']')::vector
+            # WHERE embedding IS NOT NULL AND embedding_vector IS NULL
         else:
             print(
                 "pgvector Python package not installed. Skipping vector column creation."

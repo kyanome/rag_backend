@@ -86,9 +86,9 @@ class IndexPerformanceAnalyzer:
                 "query": """
                     EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
                     SELECT id, document_id, content, 
-                           embedding <=> '[0.1, 0.2, 0.3]'::vector as distance
+                           embedding_vector <=> '[0.1, 0.2, 0.3]'::vector as distance
                     FROM document_chunks
-                    ORDER BY embedding <=> '[0.1, 0.2, 0.3]'::vector
+                    ORDER BY embedding_vector <=> '[0.1, 0.2, 0.3]'::vector
                     LIMIT 10;
                 """,
             },
