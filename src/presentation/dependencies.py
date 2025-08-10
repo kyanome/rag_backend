@@ -34,6 +34,7 @@ from ..infrastructure.repositories import (
     DocumentRepositoryImpl,
     PgVectorRepositoryImpl,
     SessionRepositoryImpl,
+    SQLiteVectorSearchRepository,
     UserRepositoryImpl,
 )
 
@@ -91,21 +92,16 @@ async def get_vector_search_repository(
         session: データベースセッション
 
     Returns:
-        VectorSearchRepository: ベクトル検索リポジトリ（PostgreSQL使用時）
-        None: SQLite使用時
+        VectorSearchRepository: ベクトル検索リポジトリ
     """
     settings = get_settings()
 
-    # PostgreSQLの場合のみPgVectorRepositoryを返す
+    # PostgreSQLの場合はPgVectorRepositoryを返す
     if "postgresql" in settings.database_url:
         return PgVectorRepositoryImpl(session)
 
-    # SQLiteの場合はモックを返す（開発用）
-    from ..infrastructure.repositories.mock_vector_repository import (
-        MockVectorSearchRepository,
-    )
-
-    return MockVectorSearchRepository()
+    # SQLiteの場合はSQLiteVectorSearchRepositoryを返す
+    return SQLiteVectorSearchRepository(session)
 
 
 async def get_chunk_document_use_case(

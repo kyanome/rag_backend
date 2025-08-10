@@ -77,7 +77,7 @@ class TestDocumentRepositoryImpl:
             content=sample_document.content,
         )
         mock_session.add.assert_called_once()
-        mock_session.commit.assert_called_once()
+        mock_session.flush.assert_called_once()
 
     async def test_save_existing_document(
         self,
@@ -100,7 +100,7 @@ class TestDocumentRepositoryImpl:
 
         assert existing_model.title == sample_document.title
         assert existing_model.version == sample_document.version
-        mock_session.commit.assert_called_once()
+        mock_session.flush.assert_called_once()
 
     async def test_save_rollback_on_error(
         self,

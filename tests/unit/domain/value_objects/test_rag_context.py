@@ -226,7 +226,7 @@ class TestRAGContext:
 
         # スコアなし
         prompt_context = context.to_prompt_context(include_scores=False)
-        assert "[Document 1: Title 1]" in prompt_context
+        assert "[1] Title 1" in prompt_context
         assert "Score:" not in prompt_context
 
         # スコアあり

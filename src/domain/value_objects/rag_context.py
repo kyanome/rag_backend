@@ -166,13 +166,20 @@ class RAGContext(BaseModel):
         if not self.search_results:
             return "No relevant context found."
 
-        if include_scores:
-            parts = []
-            for i, result in enumerate(self.search_results, 1):
+        parts = []
+        for i, result in enumerate(self.search_results, 1):
+            if include_scores:
                 parts.append(
                     f"[{i}] {result.document_title} (Score: {result.score:.2f})\n"
                     f"{result.content_preview}\n"
                 )
-            return "\n".join(parts)
+            else:
+                parts.append(
+                    f"[{i}] {result.document_title}\n" f"{result.content_preview}\n"
+                )
 
-        return self.context_text
+        return (
+            "\n".join(parts)
+            if parts
+            else (self.context_text or "No relevant context found.")
+        )

@@ -1,6 +1,7 @@
 """SQLAlchemyモデル定義。"""
 
 import base64
+import os
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -20,15 +21,6 @@ from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import CHAR, TypeDecorator
 
-# Import pgvector only if PostgreSQL is being used
-try:
-    from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
-
-    PGVECTOR_AVAILABLE = True
-except ImportError:
-    PGVECTOR_AVAILABLE = False
-    Vector = None
-
 from src.domain.entities import Document as DomainDocument
 from src.domain.entities import Session as DomainSession
 from src.domain.entities import User as DomainUser
@@ -46,6 +38,19 @@ from src.domain.value_objects import (
 )
 
 from .connection import Base
+
+# Import pgvector only if PostgreSQL is being used
+try:
+    from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
+
+    PGVECTOR_AVAILABLE = True
+except ImportError:
+    PGVECTOR_AVAILABLE = False
+    Vector = None
+
+# Check if we're using PostgreSQL based on database URL
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+USE_VECTOR_DB = PGVECTOR_AVAILABLE and "postgresql" in DATABASE_URL.lower()
 
 
 class UUID(TypeDecorator):
@@ -204,11 +209,12 @@ class DocumentChunkModel(Base):
 
     # PostgreSQL with pgvector: Use Vector type
     # Other databases: Use JSON type for backward compatibility
-    if PGVECTOR_AVAILABLE and Vector is not None:
+    if USE_VECTOR_DB and Vector is not None:
         embedding_vector = Column(Vector(1536), nullable=True)  # For pgvector
         embedding = Column(JSON, nullable=True)  # Keep for backward compatibility
     else:
-        embedding_vector = None
+        # For SQLite or when pgvector is not available
+        # Don't define embedding_vector as a column
         embedding = Column(JSON, nullable=True)  # Fallback to JSON
 
     chunk_metadata = Column(JSON, nullable=False)
@@ -220,19 +226,18 @@ class DocumentChunkModel(Base):
     document = relationship("DocumentModel", back_populates="chunks")
 
     # Indexes for vector search (only created when using PostgreSQL)
-    __table_args__ = (
-        (
+    if USE_VECTOR_DB:
+        __table_args__ = (
             Index(
                 "ix_document_chunks_embedding_vector",
                 "embedding_vector",
                 postgresql_using="ivfflat",
                 postgresql_ops={"embedding_vector": "vector_cosine_ops"},
                 postgresql_with={"lists": 100},
-            )
-            if PGVECTOR_AVAILABLE
-            else ()
-        ),
-    )
+            ),
+        )
+    else:
+        __table_args__ = ()  # type: ignore[assignment]
 
     def to_domain(self) -> DomainDocumentChunk:
         """ドメイン値オブジェクトに変換する。
@@ -254,7 +259,7 @@ class DocumentChunkModel(Base):
         # Use embedding_vector if available (pgvector), otherwise fall back to embedding (JSON)
         embedding_data = None
         if (
-            PGVECTOR_AVAILABLE
+            USE_VECTOR_DB
             and hasattr(self, "embedding_vector")
             and self.embedding_vector is not None
         ):
@@ -297,9 +302,9 @@ class DocumentChunkModel(Base):
             chunk_metadata=metadata_dict,
         )
 
-        # Store embedding in both fields for compatibility
+        # Store embedding in appropriate field based on database type
         if chunk.embedding:
-            if PGVECTOR_AVAILABLE:
+            if USE_VECTOR_DB:
                 model.embedding_vector = chunk.embedding  # type: ignore[assignment]
             model.embedding = chunk.embedding  # type: ignore[assignment]
 

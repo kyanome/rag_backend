@@ -94,7 +94,7 @@ class DocumentRepositoryImpl(DocumentRepository):
                 # 新しいチャンクを追加
                 for domain_chunk in document.chunks:
                     chunk_model = DocumentChunkModel.from_domain(domain_chunk)
-                    existing.chunks.append(chunk_model)
+                    self.session.add(chunk_model)
             else:
                 # 新規作成の場合
                 model = DocumentModel.from_domain(document)
@@ -104,11 +104,11 @@ class DocumentRepositoryImpl(DocumentRepository):
                 # チャンクの追加
                 for domain_chunk in document.chunks:
                     chunk_model = DocumentChunkModel.from_domain(domain_chunk)
-                    model.chunks.append(chunk_model)
+                    self.session.add(chunk_model)
 
                 self.session.add(model)
 
-            await self.session.commit()
+            await self.session.flush()
         except Exception as e:
             await self.session.rollback()
             raise Exception(f"Failed to save document: {e}") from e
