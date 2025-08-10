@@ -1,7 +1,6 @@
 """Basic benchmark tests to ensure CI runs properly."""
 
 import time
-import pytest
 
 
 def simple_function(n: int) -> int:
@@ -20,9 +19,10 @@ def test_simple_benchmark(benchmark):
 
 def test_performance_baseline(benchmark):
     """Performance baseline test."""
+
     def sleep_function():
         time.sleep(0.001)
         return True
-    
+
     result = benchmark(sleep_function)
     assert result is True
