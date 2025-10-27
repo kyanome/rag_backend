@@ -88,7 +88,7 @@ jobs:
           --benchmark-min-rounds=5
     
     - name: Upload benchmark results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: benchmark-results
         path: |
@@ -198,7 +198,7 @@ jobs:
           --csv load_test
     
     - name: Upload load test results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: load-test-results
         path: |
